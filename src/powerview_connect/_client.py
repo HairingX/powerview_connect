@@ -56,6 +56,7 @@ class PowerViewClient:
     - `PUT /home/shades/positions?ids=...`: move; a rail not given is not changed
     - `PUT /home/shades/stop?ids=...`
     - `PUT /home/scenes/{id}/activate`
+    - `PUT /home/shades/{id}/motion` with `{"motion": "jog"}` or `{"motion": "heart"}`
     - `GET /home/shades/events?sse=true`: shade events, as server-sent events
     """
 
@@ -171,6 +172,14 @@ class PowerViewClient:
     async def activate_scene(self, scene_id: int) -> None:
         """Activate a scene stored on the gateway; the gateway moves its shades."""
         await self._command(f"/home/scenes/{scene_id}/activate")
+
+    async def jog(self, shade_id: int) -> None:
+        """Move a shade briefly back and forth, to show which one it is."""
+        await self._command(f"/home/shades/{shade_id}/motion", {"motion": "jog"})
+
+    async def move_to_favorite(self, shade_id: int) -> None:
+        """Move a shade to the favorite position stored in it, as the remote's heart button does."""
+        await self._command(f"/home/shades/{shade_id}/motion", {"motion": "heart"})
 
     @asynccontextmanager
     async def shade_events(

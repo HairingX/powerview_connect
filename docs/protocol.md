@@ -14,6 +14,7 @@ as it says.
 | `PUT /home/shades/positions?ids=1,2` with `{"positions": {...}}` | `{"err": 0, "responses": [{"id", "bleName", "err", "hex"}], "wentViaHTTP": true}` |
 | `PUT /home/shades/stop?ids=1,2` | as for positions |
 | `PUT /home/scenes/{id}/activate` | not measured |
+| `PUT /home/shades/{id}/motion` with `{"motion": "jog"}` or `{"motion": "heart"}` | not measured; the Gen 3 API describes a jog to identify the shade and a move to its favorite position |
 | `GET /home/shades/events?sse=true` | the event stream |
 
 A shade has `id`, `name` (base64 of `ptName`), `ptName`, `type`, `capabilities`, `powerType`
