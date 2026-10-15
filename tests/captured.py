@@ -54,3 +54,14 @@ HOME: dict[str, object] = {
     ],
 }
 """/home, trimmed to two shades and one scene; its structure is verbatim."""
+
+SHADE: dict[str, object] = {
+    "id": 154, "type": 8, "name": "S2l0Y2hlbiBNaWRkbGUgQ3VydGFpbg==",
+    "ptName": "Kitchen Middle Curtain", "motion": None, "capabilities": 7, "powerType": 1,
+    "batteryStatus": 3, "roomId": 65,
+    "firmware": {"revision": 3, "subRevision": 0, "build": 433},
+    "positions": {"primary": 0, "secondary": 0, "tilt": 0, "velocity": 0},
+    "signalStrength": -66, "bleName": "DU1:0154", "shadeGroupIds": [],
+    "serialNumber": "0000000000000154",
+}
+"""GET /home/shades/154: a hard-wired shade, which reports a battery status too."""

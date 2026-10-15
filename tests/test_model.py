@@ -1,7 +1,7 @@
 """Parsing what the gateway sends, from captures of a real one."""
 import pytest
 
-from captured import COMMAND_RESPONSE, HOME, SSE
+from captured import COMMAND_RESPONSE, HOME, SHADE, SSE
 from powerview_connect import (
     Capabilities,
     EventKind,
@@ -121,3 +121,14 @@ def test_errors_of_the_gateway_and_of_each_shade_are_named() -> None:
     assert command_errors({"err": 3, "responses": [
         {"bleName": "DU1:0154", "err": 7, "id": 154}, {"id": 155, "err": 0}]}) == [
         "gateway err=3", "shade 154 (DU1:0154) err=7"]
+
+
+def test_a_shade_says_how_well_the_gateway_hears_it_and_its_battery_number() -> None:
+    shade = parse_shade(SHADE)
+    assert (shade.signal_strength, shade.battery_status, shade.power_type) == (-66, 3, 1)
+    assert shade.name == "Kitchen Middle Curtain"
+
+
+def test_a_shade_without_signal_strength_or_battery_status_has_none() -> None:
+    shade = parse_shade({"id": 1})
+    assert (shade.signal_strength, shade.battery_status) == (None, None)

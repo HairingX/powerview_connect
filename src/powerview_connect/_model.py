@@ -85,6 +85,10 @@ class Shade:
     ble_name: str | None
     serial: str | None
     positions: Positions = field(default_factory=lambda: {})
+    signal_strength: int | None = None
+    """The gateway's reception of the shade, in dBm; closer to 0 is stronger."""
+    battery_status: int | None = None
+    """The gateway's number for the battery; hard-wired shades report one too."""
 
     @property
     def capability(self) -> Capabilities | None:
@@ -204,6 +208,8 @@ def parse_shade(raw: Mapping[str, object], room_name: str | None = None) -> Shad
         ble_name=_text(raw.get("bleName")),
         serial=_text(raw.get("serialNumber")),
         positions=parse_positions(raw.get("positions")),
+        signal_strength=_int(raw.get("signalStrength")),
+        battery_status=_int(raw.get("batteryStatus")),
     )
 
 

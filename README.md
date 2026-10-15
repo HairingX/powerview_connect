@@ -53,6 +53,13 @@ asyncio.run(main())
 Use the address of the **primary** gateway: it lists the whole home, auxiliary gateways and
 their shades included. `home.gateway_at(host)` says which gateway an address is.
 
+### What a shade reports
+
+A `Shade` carries its name, room, `capabilities` (named by `capability`), `type`, `power_type`
+(1 is hard-wired), `firmware`, `positions`, and `signal_strength`: how well the gateway hears
+it, in dBm, closer to 0 being stronger. `battery_status` is the gateway's number for the battery;
+a hard-wired shade reports one too, so it says nothing by itself.
+
 ### Positions
 
 Every rail runs from `0.0`, fully closed, to `1.0`, fully open:
