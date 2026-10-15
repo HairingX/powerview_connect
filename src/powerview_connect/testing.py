@@ -55,6 +55,8 @@ class SimulatedShade:
     signal_strength: int | None = -66
     """In dBm, as the gateway reports it; None leaves it out."""
     battery_status: int = 3
+    favorite: dict[Rail, float] = field(default_factory=lambda: {Rail.PRIMARY: 0.5})
+    """Where the remote's heart button, and a move to the favorite, takes the shade."""
 
     @property
     def ble_name(self) -> str:
@@ -139,6 +141,7 @@ class SimulatedGateway:
         self._app.router.add_put("/home/shades/positions", self._positions)
         self._app.router.add_put("/home/shades/stop", self._stop)
         self._app.router.add_put("/home/scenes/{id}/activate", self._activate)
+        self._app.router.add_put("/home/shades/{id}/motion", self._motion)
 
     # ------------------------------------------------------------------- what it holds
 
@@ -381,6 +384,18 @@ class SimulatedGateway:
             shade.target = None
             self.emit(EventKind.MOTION_STOPPED, shade.id)
         return self._answer(shades)
+
+    async def _motion(self, request: web.Request) -> web.Response:
+        body = await self._record(request)
+        shade = self.shades.get(int(request.match_info["id"]))
+        motion = cast(dict[str, object], body).get("motion") if isinstance(body, dict) else None
+        if shade is None:
+            raise web.HTTPNotFound()
+        if motion not in ("jog", "heart"):
+            raise web.HTTPBadRequest(text=f"unknown motion: {motion!r}")
+        if motion == "heart" and shade.id not in self.command_errors:
+            self._start_motion(shade, shade.favorite)
+        return self._answer([shade])
 
     async def _activate(self, request: web.Request) -> web.Response:
         await self._record(request)
