@@ -81,7 +81,6 @@ that would cross them is safe to send.
 | `stop(ids)` | stop where they are |
 | `activate_scene(scene_id)` | a scene stored on the gateway |
 | `jog(shade_id)` | a short move back and forth, to show which shade it is |
-| `move_to_favorite(shade_id)` | to the favorite position stored in the shade (the remote's heart button) |
 
 A command the gateway reports an error for raises `CommandError`. A client made with
 `read_only=True` refuses every command with `ReadOnlyError` before anything is sent.
