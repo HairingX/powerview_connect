@@ -54,6 +54,7 @@ class SimulatedShade:
     serial: str | None = None
     signal_strength: int | None = -66
     """In dBm, as the gateway reports it; None leaves it out."""
+    battery_status: int = 3
 
     @property
     def ble_name(self) -> str:
@@ -73,7 +74,7 @@ class SimulatedShade:
             "firmware": {"revision": revision, "subRevision": sub_revision, "build": build},
             "positions": {**self.positions, "velocity": 0},
             "bleName": self.ble_name,
-            "batteryStatus": 3,
+            "batteryStatus": self.battery_status,
         }
         if self.serial is not None:
             document["serialNumber"] = self.serial
@@ -162,12 +163,13 @@ class SimulatedGateway:
         firmware: tuple[int, int, int] = (3, 0, 433),
         serial: str | None = None,
         signal_strength: int | None = -66,
+        battery_status: int = 3,
     ) -> SimulatedShade:
         """Add a shade to a room, standing still at `positions` (0.0 for a rail not given)."""
         shade = SimulatedShade(
             shade_id, name, room_id, int(capabilities), shade_type,
             power_type=power_type, firmware=firmware, serial=serial,
-            signal_strength=signal_strength,
+            signal_strength=signal_strength, battery_status=battery_status,
         )
         shade.positions.update(positions or {})
         self.shades[shade_id] = shade

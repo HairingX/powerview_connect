@@ -43,6 +43,23 @@ class Capabilities(IntEnum):
     DUAL_OVERLAPPED_TILT_180 = 10
 
 
+class BatteryStatus(IntEnum):
+    """A shade's battery, as the gateway's `batteryStatus` number says.
+
+    As Hunter Douglas's Gen 3 API describes it; a hard-wired shade was measured to report HIGH.
+    """
+
+    UNKNOWN = 0
+    LOW = 1
+    MEDIUM = 2
+    HIGH = 3
+    PLUGGED_IN = 4
+
+
+HARD_WIRED = 1
+"""The `powerType` of a shade on mains power, as measured."""
+
+
 class EventKind(StrEnum):
     """The kinds of event the gateway's shade event stream sends."""
 
@@ -89,6 +106,19 @@ class Shade:
     """The gateway's reception of the shade, in dBm; closer to 0 is stronger."""
     battery_status: int | None = None
     """The gateway's number for the battery; hard-wired shades report one too."""
+
+    @property
+    def hard_wired(self) -> bool:
+        """Whether the shade runs on mains power, so its battery status means nothing."""
+        return self.power_type == HARD_WIRED
+
+    @property
+    def battery(self) -> BatteryStatus | None:
+        """The battery status named, or None for a number this library does not know."""
+        try:
+            return BatteryStatus(self.battery_status) if self.battery_status is not None else None
+        except ValueError:
+            return None
 
     @property
     def capability(self) -> Capabilities | None:

@@ -56,6 +56,9 @@ async def test_the_home_lists_what_the_gateway_holds(
     assert shade.positions == {P: 0.0, S: 0.71, T: 0.0}
     assert shade.serial == "0000000000000154" and home.shades[271].serial is None
     assert (shade.signal_strength, shade.battery_status) == (-66, 3)
+    gateway.add_shade(5, "Battery Shade", room_id=65, power_type=0, battery_status=1)
+    battery = (await client.get_home()).shades[5]
+    assert (battery.hard_wired, battery.battery_status) == (False, 1)
     assert [(scene.id, scene.name) for scene in home.scenes] == [(216, "Kitchen Dining")]
 
 

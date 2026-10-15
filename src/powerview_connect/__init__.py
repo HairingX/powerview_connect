@@ -15,7 +15,9 @@ from ._client import (
     ResponseError,
 )
 from ._model import (
+    HARD_WIRED,
     RAILS,
+    BatteryStatus,
     Capabilities,
     EventKind,
     Gateway,
@@ -36,8 +38,10 @@ from ._motion import STEP, ShadeTracker
 __version__ = _installed_version("powerview_connect")
 __all__ = [
     "DEFAULT_TIMEOUT",
+    "HARD_WIRED",
     "RAILS",
     "STEP",
+    "BatteryStatus",
     "CannotConnectError",
     "Capabilities",
     "CommandError",

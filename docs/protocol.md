@@ -21,7 +21,8 @@ A shade has `id`, `name` (base64 of `ptName`), `ptName`, `type`, `capabilities`,
 `motion`, `positions`, `signalStrength`, `bleName`, `shadeGroupIds` and, on some,
 `serialNumber`. `signalStrength` is the gateway's reception of the shade in dBm (-66 measured).
 A hard-wired shade reports `batteryStatus` 3, so the number alone does not say a shade has a
-battery; what it means for a battery shade has not been measured. Positions run from 0.0, fully closed, to 1.0, fully open, per rail. On a
+battery: `powerType` does. The API description gives `batteryStatus` 0 unknown, 1 low,
+2 medium, 3 high, 4 plugged in; what a battery shade reports has not been measured. Positions run from 0.0, fully closed, to 1.0, fully open, per rail. On a
 top-down/bottom-up shade, `primary` is the bottom rail and `secondary` the top rail.
 
 The primary gateway's `/home` lists every gateway, auxiliary ones (`aux: true`) too, and every
