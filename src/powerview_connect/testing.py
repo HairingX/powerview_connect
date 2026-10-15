@@ -55,8 +55,6 @@ class SimulatedShade:
     signal_strength: int | None = -66
     """In dBm, as the gateway reports it; None leaves it out."""
     battery_status: int = 3
-    favorite: dict[Rail, float] = field(default_factory=lambda: {Rail.PRIMARY: 0.5})
-    """Where the remote's heart button, and a move to the favorite, takes the shade."""
 
     @property
     def ble_name(self) -> str:
@@ -391,10 +389,9 @@ class SimulatedGateway:
         motion = cast(dict[str, object], body).get("motion") if isinstance(body, dict) else None
         if shade is None:
             raise web.HTTPNotFound()
-        if motion not in ("jog", "heart"):
-            raise web.HTTPBadRequest(text=f"unknown motion: {motion!r}")
-        if motion == "heart" and shade.id not in self.command_errors:
-            self._start_motion(shade, shade.favorite)
+        if motion != "jog":
+            return web.json_response(
+                {"errMsg": 'motion property must be one of ["jog"]'}, status=400)
         return self._answer([shade])
 
     async def _activate(self, request: web.Request) -> web.Response:

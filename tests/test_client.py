@@ -290,7 +290,7 @@ async def test_a_read_only_client_refuses_every_command_before_it_is_sent(
     assert client.host == gateway.host and client.base_url == f"http://{gateway.host}"
     assert client.read_only
     for command in (client.set_positions([154], primary=0.1), client.stop([154]),
-                    client.activate_scene(216), client.jog(154), client.move_to_favorite(154)):
+                    client.activate_scene(216), client.jog(154)):
         with pytest.raises(ReadOnlyError):
             await command
     assert _commands(gateway) == []
@@ -381,29 +381,13 @@ async def test_a_jog_asks_the_shade_to_show_itself_and_moves_nothing_known(
     assert gateway.shades[154].target is None
 
 
-async def test_a_move_to_the_favorite_starts_a_move_there(
-    client: PowerViewClient, gateway: SimulatedGateway
-) -> None:
-    _furnish(gateway)
-    gateway.shades[271].favorite = {P: 0.3}
-    async with client.shade_events(idle_timeout=5) as events:
-        await gateway.wait_for_stream()
-        await client.move_to_favorite(271)
-        await _next(events)
-        started = await _next(events)
-    assert (started.kind, started.target[P]) == (EventKind.MOTION_STARTED, 0.3)
-    assert _commands(gateway)[-1].body == {"motion": "heart"}
-
-
-async def test_a_jog_or_favorite_the_gateway_reports_an_error_for_is_an_error(
+async def test_a_jog_the_gateway_reports_an_error_for_is_an_error(
     client: PowerViewClient, gateway: SimulatedGateway
 ) -> None:
     _furnish(gateway)
     gateway.command_errors[154] = 7
-    for command in (client.jog(154), client.move_to_favorite(154)):
-        with pytest.raises(CommandError, match="err=7"):
-            await command
-    assert gateway.shades[154].target is None
+    with pytest.raises(CommandError, match="err=7"):
+        await client.jog(154)
 
 
 async def test_a_motion_for_a_shade_or_of_a_kind_not_known_is_refused(
@@ -413,7 +397,8 @@ async def test_a_motion_for_a_shade_or_of_a_kind_not_known_is_refused(
     with pytest.raises(ResponseError, match="HTTP 404"):
         await client.jog(1)
     async with session.put(f"http://{gateway.host}/home/shades/154/motion",
-                           json={"motion": "calibrate"}) as response:
+                           json={"motion": "heart"}) as response:
         assert response.status == 400
+        assert await response.json() == {"errMsg": 'motion property must be one of ["jog"]'}
     async with session.put(f"http://{gateway.host}/home/shades/154/motion") as response:
         assert response.status == 400
