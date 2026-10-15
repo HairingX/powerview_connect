@@ -137,4 +137,4 @@ reports a shade offline (`set_online`) and reports errors for commands (`command
 
 - [Releases](https://github.com/HairingX/powerview_connect/releases)
 - [Issues](https://github.com/HairingX/powerview_connect/issues)
-- [Home Assistant integration](https://github.com/HairingX/ha_powerview)
+- [Home Assistant integration](https://github.com/HairingX/ha_powerview_connect)

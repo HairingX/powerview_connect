@@ -99,7 +99,7 @@ Dependabot proposes a new major, and updates to the test tools, as pull requests
   (`.github/rulesets/main.json`) enforces it; its only bypass is the owner's, and only for
   merging a pull request. A change to what a user gets - the library's code or documentation -
   comes with its tests.
-- The Home Assistant integration (`HairingX/ha_powerview`) is developed together with this
+- The Home Assistant integration (`HairingX/ha_powerview_connect`) is developed together with this
   library on a branch of the same name in each repository: its CI then tests with this
   library's branch.
 - Name every branch by the kind of change, as the release draft's labels follow the name:
