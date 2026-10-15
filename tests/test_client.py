@@ -27,7 +27,8 @@ def _furnish(gateway: SimulatedGateway) -> None:
     gateway.add_shade(154, "Kitchen Middle Curtain", room_id=65,
                       capabilities=Capabilities.TOP_DOWN_BOTTOM_UP, shade_type=8,
                       positions={S: 0.71}, serial="0000000000000154")
-    gateway.add_shade(271, "Living Room East Curtain", room_id=65, positions={T: 1.0})
+    gateway.add_shade(271, "Living Room East Curtain", room_id=65, positions={T: 1.0},
+                      signal_strength=None)
     gateway.add_scene(216, "Kitchen Dining", room_id=65, members={154: {P: 0.0, S: 0.458}})
 
 
@@ -54,6 +55,10 @@ async def test_the_home_lists_what_the_gateway_holds(
         "Kitchen Middle Curtain", "Main Room", Capabilities.TOP_DOWN_BOTTOM_UP, 8, "3.0.433")
     assert shade.positions == {P: 0.0, S: 0.71, T: 0.0}
     assert shade.serial == "0000000000000154" and home.shades[271].serial is None
+    assert (shade.signal_strength, shade.battery_status) == (-66, 3)
+    gateway.add_shade(5, "Battery Shade", room_id=65, power_type=0, battery_status=1)
+    battery = (await client.get_home()).shades[5]
+    assert (battery.hard_wired, battery.battery_status) == (False, 1)
     assert [(scene.id, scene.name) for scene in home.scenes] == [(216, "Kitchen Dining")]
 
 
@@ -61,6 +66,9 @@ async def test_a_shade_reports_its_positions_as_they_change_during_a_move(
     client: PowerViewClient, gateway: SimulatedGateway
 ) -> None:
     _furnish(gateway)
+    assert (await client.get_shade(271)).signal_strength is None
+    gateway.shades[154].signal_strength = -71
+    assert (await client.get_shade(154)).signal_strength == -71
     await client.set_positions([154], primary=0.25)
     gateway.move(154, {P: 0.1})
     assert (await client.get_shade(154)).positions[P] == 0.1
