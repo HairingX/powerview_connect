@@ -33,7 +33,6 @@ class ShadeTracker:
         self.target: dict[Rail, float | None] = dict.fromkeys(RAILS)
         """Each rail's target while moving, None where it is not known."""
         self.moving = False
-        self.online = True
         self.eta: float | None = None
         """The gateway's estimate of the current move's time in seconds."""
         self._stall = stall

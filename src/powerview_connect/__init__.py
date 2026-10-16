@@ -1,70 +1,67 @@
-"""Hunter Douglas / Luxaflex PowerView Gen 3 gateways, over their local HTTP API and event stream.
+"""Hunter Douglas / Luxaflex PowerView Gen 3 homes, over the gateway's local HTTP API.
 
-The client reads the home and moves shades, one rail at a time; the tracker follows a shade's
-motion from the events, polls and commands it is given.
+`PowerViewHub` follows a whole home through its primary gateway: it keeps every shade's and
+gateway's state current from the gateway's event stream, tells listeners of each change, and
+sends commands. Everything else here describes what it knows.
 """
 from importlib.metadata import version as _installed_version
 
-from ._client import (
-    DEFAULT_TIMEOUT,
-    CannotConnectError,
-    CommandError,
-    PowerViewClient,
-    PowerViewError,
-    ReadOnlyError,
-    ResponseError,
+from ._client import CannotConnectError, CommandError, PowerViewError, ReadOnlyError, ResponseError
+from ._clock import Clock
+from ._covers import CoverRole, CoverSpec
+from ._hub import (
+    Change,
+    Connection,
+    ConnectionChanged,
+    GatewayChanged,
+    GatewayState,
+    HomeChanged,
+    HomeDiff,
+    PowerViewHub,
+    ShadeChanged,
+    ShadeState,
+    Timing,
 )
 from ._model import (
-    HARD_WIRED,
-    RAILS,
     BatteryStatus,
     Capabilities,
-    EventKind,
+    CommandFailure,
     Gateway,
     GatewayStatus,
     Home,
-    Positions,
     Rail,
     Scene,
     Shade,
-    ShadeEvent,
-    command_errors,
-    parse_event,
-    parse_gateway,
-    parse_home,
-    parse_positions,
-    parse_shade,
 )
-from ._motion import STEP, ShadeTracker
 
 __version__ = _installed_version("powerview_connect")
 __all__ = [
-    "DEFAULT_TIMEOUT",
-    "HARD_WIRED",
-    "RAILS",
-    "STEP",
     "BatteryStatus",
     "CannotConnectError",
     "Capabilities",
+    "Change",
+    "Clock",
     "CommandError",
-    "EventKind",
+    "CommandFailure",
+    "Connection",
+    "ConnectionChanged",
+    "CoverRole",
+    "CoverSpec",
     "Gateway",
+    "GatewayChanged",
+    "GatewayState",
     "GatewayStatus",
     "Home",
-    "Positions",
-    "PowerViewClient",
+    "HomeChanged",
+    "HomeDiff",
     "PowerViewError",
+    "PowerViewHub",
     "Rail",
     "ReadOnlyError",
     "ResponseError",
     "Scene",
     "Shade",
-    "ShadeEvent",
-    "ShadeTracker",
-    "command_errors",
-    "parse_event",
-    "parse_gateway",
-    "parse_home",
-    "parse_positions",
-    "parse_shade",
+    "ShadeChanged",
+    "ShadeState",
+    "Timing",
 ]

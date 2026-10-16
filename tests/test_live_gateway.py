@@ -21,7 +21,9 @@ import aiohttp
 import pytest
 
 from conftest import live_or_skip, live_setting
-from powerview_connect import PowerViewClient, ReadOnlyError, ShadeEvent
+from powerview_connect import ReadOnlyError
+from powerview_connect._client import PowerViewClient
+from powerview_connect._model import ShadeEvent
 
 HOST = live_setting("POWERVIEW_HOST")
 LISTEN = float(live_setting("POWERVIEW_LISTEN") or "30")

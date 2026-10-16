@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import heapq
 import json
 import socket
 from collections.abc import Mapping
@@ -21,10 +22,51 @@ from aiohttp import web
 
 from ._model import RAILS, Capabilities, EventKind, Rail
 
-__all__ = ["Request", "SimulatedGateway", "SimulatedShade"]
+__all__ = ["ManualClock", "Request", "SimulatedGateway", "SimulatedShade"]
+
+_BREAK = "break"
+"""Put on a stream's queue to cut the stream off."""
 
 _ETA_PER_FULL_MOVE = 20.0
 """The gateway's estimate, in seconds, for a rail moving all the way."""
+
+
+class ManualClock:
+    """A clock that moves only when a test advances it, for a hub's `clock`."""
+
+    def __init__(self, now: float = 1000.0) -> None:
+        """A clock at `now` seconds."""
+        self.now = now
+        self._sleepers: list[tuple[float, int, asyncio.Future[None]]] = []
+        self._count = 0
+
+    def monotonic(self) -> float:
+        """The time, in seconds."""
+        return self.now
+
+    async def sleep(self, seconds: float) -> None:
+        """Return once the clock has been advanced by `seconds`."""
+        future = asyncio.get_running_loop().create_future()
+        self._count += 1
+        heapq.heappush(self._sleepers, (self.now + max(seconds, 0.0), self._count, future))
+        await future
+
+    @property
+    def sleepers(self) -> int:
+        """How many sleeps wait for the clock."""
+        return sum(not future.done() for _, _, future in self._sleepers)
+
+    async def advance(self, seconds: float) -> None:
+        """Move the clock on, waking each sleep in the order it is due."""
+        until = self.now + seconds
+        while self._sleepers and self._sleepers[0][0] <= until:
+            due, _, future = heapq.heappop(self._sleepers)
+            self.now = max(self.now, due)
+            if not future.done():
+                future.set_result(None)
+                await asyncio.sleep(0)
+        self.now = until
+        await asyncio.sleep(0)
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,6 +172,10 @@ class SimulatedGateway:
         """The network interface the gateway reports in use."""
         self.internet_state = "Connected"
         """What the gateway reports of its internet connection."""
+        self.refuse_streams = False
+        """Answer a request for the event stream with HTTP 503."""
+        self.shade_read_delay = 0.0
+        """Seconds a read of one shade waits before it is answered, as on a busy gateway."""
         self.home_id = home_id
         self.rooms: dict[int, str] = {}
         self.shades: dict[int, SimulatedShade] = {}
@@ -333,6 +379,11 @@ class SimulatedGateway:
         for queue in self._streams:
             queue.put_nowait(None)
 
+    def break_streams(self) -> None:
+        """Cut every open event stream off in the middle of a line, as a broken connection does."""
+        for queue in self._streams:
+            queue.put_nowait(_BREAK)
+
     # ------------------------------------------------------------------ the shades
 
     def move(self, shade_id: int, positions: Mapping[Rail, float]) -> None:
@@ -406,6 +457,7 @@ class SimulatedGateway:
 
     async def _shade(self, request: web.Request) -> web.Response:
         await self._record(request)
+        await asyncio.sleep(self.shade_read_delay)
         shade = self.shades.get(int(request.match_info["id"]))
         if shade is None:
             raise web.HTTPNotFound()
@@ -458,6 +510,8 @@ class SimulatedGateway:
 
     async def _events(self, request: web.Request) -> web.StreamResponse:
         await self._record(request)
+        if self.refuse_streams:
+            return web.Response(status=503)
         response = web.StreamResponse(headers={"Content-Type": "text/event-stream"})
         await response.prepare(request)
         queue: asyncio.Queue[str | None] = asyncio.Queue()
@@ -468,6 +522,11 @@ class SimulatedGateway:
             with contextlib.suppress(ConnectionError):
                 await response.write(b"100 HELO\n\n")
                 while (line := await queue.get()) is not None:
+                    if line is _BREAK:
+                        await response.write(b"data: {\"evt\": \"motion-sta")
+                        # The stream's connection is open while it is written to.
+                        cast(asyncio.BaseTransport, request.transport).close()
+                        break
                     await response.write(line.encode())
         finally:
             self._streams.remove(queue)

@@ -5,8 +5,11 @@ from captured import COMMAND_RESPONSE, GATEWAY, GATEWAY_WIFI, HOME, SHADE, SSE
 from powerview_connect import (
     BatteryStatus,
     Capabilities,
-    EventKind,
+    CommandFailure,
     Rail,
+)
+from powerview_connect._model import (
+    EventKind,
     command_errors,
     parse_event,
     parse_gateway,
@@ -119,10 +122,11 @@ def test_a_command_the_gateway_took_has_no_errors() -> None:
     assert command_errors(None) == []
 
 
-def test_errors_of_the_gateway_and_of_each_shade_are_named() -> None:
-    assert command_errors({"err": 3, "responses": [
-        {"bleName": "DU1:0154", "err": 7, "id": 154}, {"id": 155, "err": 0}]}) == [
-        "gateway err=3", "shade 154 (DU1:0154) err=7"]
+def test_errors_of_the_gateway_and_of_each_shade_are_named_by_id_alone() -> None:
+    failures = command_errors({"err": 3, "responses": [
+        {"bleName": "DU1:0154", "err": 7, "id": 154}, {"id": 155, "err": 0}]})
+    assert failures == [CommandFailure(None, 3), CommandFailure(154, 7)]
+    assert [str(failure) for failure in failures] == ["gateway err=3", "shade 154 err=7"]
 
 
 def test_a_shade_says_how_well_the_gateway_hears_it_and_its_battery_number() -> None:
@@ -207,3 +211,25 @@ def test_the_interface_in_use_says_whether_a_gateway_is_on_wifi(
 def test_a_gateway_reaches_the_internet_only_while_it_says_connected() -> None:
     status = parse_gateway({"config": {"networkStatus": {"internetState": "Disconnected"}}})
     assert status.internet_connected is False
+
+
+@pytest.mark.parametrize(("raw", "has_battery", "low"), [
+    ({"id": 1, "powerType": 1, "batteryStatus": 1}, False, None),
+    ({"id": 1, "batteryStatus": 1}, False, None),
+    ({"id": 1, "powerType": 0, "batteryStatus": 1}, True, True),
+    ({"id": 1, "powerType": 0, "batteryStatus": 3}, True, False),
+    ({"id": 1, "powerType": 0, "batteryStatus": 0}, True, None),
+    ({"id": 1, "powerType": 0}, True, None),
+])
+def test_only_a_shade_off_mains_power_has_a_battery_that_can_be_low(
+    raw: dict[str, object], has_battery: bool, low: bool | None
+) -> None:
+    shade = parse_shade(raw)
+    assert (shade.has_battery, shade.battery_low) == (has_battery, low)
+
+
+def test_the_home_says_which_gateway_serves_a_shade() -> None:
+    home = parse_home(HOME)
+    serving = home.gateway_of(163)
+    assert serving is not None and serving.serial == "gateway-aux-02"
+    assert home.gateway_of(999) is None

@@ -10,13 +10,12 @@ from powerview_connect import (
     CannotConnectError,
     Capabilities,
     CommandError,
-    EventKind,
-    PowerViewClient,
     Rail,
     ReadOnlyError,
     ResponseError,
-    ShadeEvent,
 )
+from powerview_connect._client import PowerViewClient, StreamIdleError
+from powerview_connect._model import EventKind, ShadeEvent
 from powerview_connect.testing import Request, SimulatedGateway
 
 P, S, T = Rail.PRIMARY, Rail.SECONDARY, Rail.TILT
@@ -149,7 +148,8 @@ async def test_an_error_the_gateway_reports_for_a_shade_is_raised(
     gateway.command_errors[154] = 7
     with pytest.raises(CommandError, match="shade 154") as raised:
         await client.set_positions([154], primary=0.5)
-    assert raised.value.errors == ["shade 154 (SIM:0154) err=7"]
+    assert [str(failure) for failure in raised.value.failures] == ["shade 154 err=7"]
+    assert raised.value.shade_ids == {154} and "SIM:" not in str(raised.value)
 
 
 async def test_events_announce_a_move_and_its_end(
@@ -437,3 +437,37 @@ async def test_a_motion_for_a_shade_or_of_a_kind_not_known_is_refused(
         assert await response.json() == {"errMsg": 'motion property must be one of ["jog"]'}
     async with session.put(f"http://{gateway.host}/home/shades/154/motion") as response:
         assert response.status == 400
+
+
+async def test_a_silent_stream_raises_its_own_error(
+    client: PowerViewClient, gateway: SimulatedGateway
+) -> None:
+    async with client.shade_events(idle_timeout=0.2) as events:
+        with pytest.raises(StreamIdleError):
+            await _next(events)
+
+
+async def test_a_stream_broken_by_the_gateway_cannot_be_read_on(
+    session: aiohttp.ClientSession,
+) -> None:
+    async def broken(request: web.Request) -> web.StreamResponse:
+        response = web.StreamResponse(headers={"Content-Type": "text/event-stream"})
+        await response.prepare(request)
+        await response.write(b"100 HELO\n\ndata: {\"evt\": \"motion-sta")
+        assert request.transport is not None
+        request.transport.close()
+        return response
+
+    app = web.Application()
+    app.router.add_get("/home/shades/events", broken)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "127.0.0.1", 0)
+    await site.start()
+    try:
+        client = PowerViewClient(session, site.name.removeprefix("http://"))
+        async with client.shade_events(idle_timeout=5) as events:
+            with pytest.raises(CannotConnectError, match="shade events"):
+                await _next(events)
+    finally:
+        await runner.cleanup()

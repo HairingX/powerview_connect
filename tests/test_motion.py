@@ -1,6 +1,8 @@
 """Following a shade's motion, with the timings a real gateway and shade were measured at."""
 from captured import POLLS, SSE
-from powerview_connect import Rail, ShadeEvent, ShadeTracker, parse_event
+from powerview_connect import Rail
+from powerview_connect._model import ShadeEvent, parse_event
+from powerview_connect._motion import ShadeTracker
 
 P, S, T = Rail.PRIMARY, Rail.SECONDARY, Rail.TILT
 

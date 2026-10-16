@@ -9,6 +9,7 @@ from typing import cast
 import aiohttp
 
 from ._model import (
+    CommandFailure,
     GatewayStatus,
     Home,
     Shade,
@@ -36,13 +37,23 @@ class ResponseError(PowerViewError):
     """The gateway answered, but not with what was asked for."""
 
 
+class StreamIdleError(CannotConnectError):
+    """The event stream stayed silent longer than allowed, as it does while nothing moves."""
+
+
 class CommandError(PowerViewError):
     """The gateway took a command but reported an error for it."""
 
-    def __init__(self, errors: list[str]) -> None:
-        """An error for what the gateway reported."""
-        super().__init__("; ".join(errors))
-        self.errors = errors
+    def __init__(self, failures: list[CommandFailure]) -> None:
+        """An error for what the gateway reported; its message names shades by their id."""
+        super().__init__("; ".join(str(failure) for failure in failures))
+        self.failures = failures
+
+    @property
+    def shade_ids(self) -> frozenset[int]:
+        """The shades the gateway reported an error for."""
+        return frozenset(
+            failure.shade_id for failure in self.failures if failure.shade_id is not None)
 
 
 class ReadOnlyError(PowerViewError):
@@ -203,7 +214,8 @@ class PowerViewClient:
 
         Raises:
             CannotConnectError: on entry, when the stream cannot be opened; while iterating,
-                when it breaks or stays silent too long.
+                when it breaks.
+            StreamIdleError: while iterating, when the stream stays silent too long.
             ResponseError: on entry, when the gateway refuses the stream.
         """
         path = "/home/shades/events?sse=true"
@@ -229,5 +241,7 @@ class PowerViewClient:
             async for line in response.content:
                 if (event := parse_event(line.decode("utf-8", "replace"))) is not None:
                     yield event
-        except (aiohttp.ClientError, TimeoutError, OSError) as err:
+        except TimeoutError as err:
+            raise StreamIdleError(f"shade events: silent too long: {err!r}") from err
+        except (aiohttp.ClientError, OSError) as err:
             raise CannotConnectError(f"shade events: {err!r}") from err
