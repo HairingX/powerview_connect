@@ -22,6 +22,7 @@ from powerview_connect import (
     HomeChanged,
     PowerViewHub,
     Rail,
+    ReadOnlyError,
     ShadeChanged,
     ShadeState,
     Timing,
@@ -271,6 +272,20 @@ async def test_a_command_for_a_shade_or_scene_not_known_is_refused_before_it_is_
         with pytest.raises(KeyError):
             await command
     assert len(gateway.requests) == sent
+
+
+async def test_a_read_only_hub_follows_the_home_and_refuses_every_command(
+    session: aiohttp.ClientSession, gateway: SimulatedGateway
+) -> None:
+    _furnish(gateway)
+    hub = PowerViewHub(session, gateway.host, read_only=True)
+    await hub.load()
+    for command in (hub.move(PATIO, {P: 0.5}), hub.stop(PATIO), hub.jog(PATIO),
+                    hub.activate_scene(216)):
+        with pytest.raises(ReadOnlyError):
+            await command
+    assert all(request.method == "GET" for request in gateway.requests)
+    assert hub.client.read_only and hub.available
 
 
 async def test_an_error_the_gateway_reports_for_a_command_is_raised(

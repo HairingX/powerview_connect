@@ -17,6 +17,7 @@ from ._client import (
     CannotConnectError,
     PowerViewClient,
     PowerViewError,
+    ReadOnlyError,
     StreamIdleError,
 )
 from ._clock import Clock, SystemClock
@@ -224,13 +225,19 @@ class PowerViewHub:
         timing: Timing | None = None,
         clock: Clock | None = None,
         logger: logging.Logger | None = None,
+        read_only: bool = False,
     ) -> None:
-        """A hub for the primary gateway at `host`, on a session its owner keeps."""
+        """A hub for the primary gateway at `host`, on a session its owner keeps.
+
+        Args:
+            read_only: refuse every command before it reaches the gateway, with `ReadOnlyError`.
+        """
         self._timing = timing or Timing()
         self._clock = clock or SystemClock()
         self._log = logger or logging.getLogger("powerview_connect")
         self._session = session
-        self._client = PowerViewClient(session, host, timeout=self._timing.request_timeout)
+        self._client = PowerViewClient(session, host, timeout=self._timing.request_timeout,
+                                       read_only=read_only)
         self._home: Home | None = None
         self._shades: dict[int, Shade] = {}
         self._trackers: dict[int, ShadeTracker] = {}
@@ -478,6 +485,8 @@ class PowerViewHub:
         started = self._clock.monotonic()
         try:
             found = await request
+        except ReadOnlyError:
+            raise
         except PowerViewError as err:
             self._log.debug("%s failed after %.2f s", what, self._clock.monotonic() - started)
             # Any answer, an error included, shows the gateway answers.
