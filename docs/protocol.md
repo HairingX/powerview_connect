@@ -30,8 +30,8 @@ top-down/bottom-up shade, `primary` is the bottom rail and `secondary` the top r
 The primary gateway's `/home` lists every gateway, auxiliary ones (`aux: true`) too, and every
 shade. `shd_Ids` lists the shades a gateway serves; each shade was listed under one gateway.
 A gateway on Wi-Fi lists its `ssid`; one on a cable lists `""`. `radio2V` was `""` on a
-"Std" gateway, which may have one radio. `remotes` was empty in a home with remotes paired to
-their shades: the gateway does not report those remotes.
+"Std" gateway, which may have one radio. `remotes` was empty in a home without remotes; what
+it lists for a remote has not been measured.
 
 `GET /gateway` was answered alike by the primary and an auxiliary gateway, but for
 `mgwConfig.primary`. `activeInterface` was `eth0` on a cable, with `eth0.type` `Wired`;
