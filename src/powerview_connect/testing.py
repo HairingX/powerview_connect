@@ -55,6 +55,8 @@ class SimulatedShade:
     signal_strength: int | None = -66
     """In dBm, as the gateway reports it; None leaves it out."""
     battery_status: int = 3
+    gateway: str | None = None
+    """The serial number of the gateway that serves the shade; None for the simulated one."""
 
     @property
     def ble_name(self) -> str:
@@ -85,12 +87,14 @@ class SimulatedShade:
 
 @dataclass(slots=True)
 class _Gateway:
+    id: int
     serial: str
     name: str
     ip: str
     aux: bool
     model: str = "Pro"
     firmware: str = "3.2.59"
+    radio_firmware: str = "3.0.43"
 
 
 @dataclass(slots=True)
@@ -117,9 +121,15 @@ class SimulatedGateway:
         serial: str = "SIMULATED-0001",
         name: str = "Simulated Gateway",
         home_id: str = "simulated-home",
+        primary: bool = True,
     ) -> None:
-        """A gateway that lists itself as the primary gateway, at 127.0.0.1."""
-        self.gateways: list[_Gateway] = [_Gateway(serial, name, "127.0.0.1", aux=False)]
+        """A gateway that lists itself at 127.0.0.1, as the primary gateway unless `primary` is
+        False."""
+        self.gateways: list[_Gateway] = [_Gateway(1, serial, name, "127.0.0.1", aux=not primary)]
+        self.interface = "eth0"
+        """The network interface the gateway reports in use."""
+        self.internet_state = "Connected"
+        """What the gateway reports of its internet connection."""
         self.home_id = home_id
         self.rooms: dict[int, str] = {}
         self.shades: dict[int, SimulatedShade] = {}
@@ -134,6 +144,7 @@ class SimulatedGateway:
         self._port = 0
         self._app = web.Application()
         self._app.router.add_get("/home", self._home)
+        self._app.router.add_get("/gateway", self._gateway)
         self._app.router.add_get("/home/shades/events", self._events)
         self._app.router.add_get("/home/shades/{id}", self._shade)
         self._app.router.add_put("/home/shades/positions", self._positions)
@@ -144,8 +155,11 @@ class SimulatedGateway:
     # ------------------------------------------------------------------- what it holds
 
     def add_gateway(self, serial: str, name: str, *, ip: str, aux: bool = True) -> None:
-        """List another gateway in the home, an auxiliary one unless `aux` is False."""
-        self.gateways.append(_Gateway(serial, name, ip, aux))
+        """List another gateway in the home, an auxiliary one unless `aux` is False.
+
+        `ip` may carry a port, to list another simulated gateway by its `host`.
+        """
+        self.gateways.append(_Gateway(len(self.gateways) + 1, serial, name, ip, aux))
 
     def add_room(self, room_id: int, name: str) -> None:
         """Add a room for shades and scenes to be in."""
@@ -165,12 +179,16 @@ class SimulatedGateway:
         serial: str | None = None,
         signal_strength: int | None = -66,
         battery_status: int = 3,
+        gateway: str | None = None,
     ) -> SimulatedShade:
-        """Add a shade to a room, standing still at `positions` (0.0 for a rail not given)."""
+        """Add a shade to a room, standing still at `positions` (0.0 for a rail not given).
+
+        `gateway` is the serial number of the gateway that serves it; None for this one.
+        """
         shade = SimulatedShade(
             shade_id, name, room_id, int(capabilities), shade_type,
             power_type=power_type, firmware=firmware, serial=serial,
-            signal_strength=signal_strength, battery_status=battery_status,
+            signal_strength=signal_strength, battery_status=battery_status, gateway=gateway,
         )
         shade.positions.update(positions or {})
         self.shades[shade_id] = shade
@@ -193,8 +211,12 @@ class SimulatedGateway:
         return {
             "id": self.home_id,
             "gateways": [
-                {"v": gateway.firmware, "serial": gateway.serial, "model": gateway.model,
-                 "name": gateway.name, "ip": gateway.ip, "aux": gateway.aux}
+                {"_id": gateway.id, "v": gateway.firmware, "serial": gateway.serial,
+                 "model": gateway.model, "name": gateway.name, "ip": gateway.ip,
+                 "aux": gateway.aux, "radio1V": gateway.radio_firmware,
+                 "radio2V": gateway.radio_firmware,
+                 "shd_Ids": [shade.id for shade in self.shades.values()
+                             if (shade.gateway or self.gateways[0].serial) == gateway.serial]}
                 for gateway in self.gateways
             ],
             "rooms": [
@@ -212,6 +234,32 @@ class SimulatedGateway:
                  ]}
                 for scene in self.scenes.values()
             ],
+        }
+
+    def gateway(self) -> dict[str, object]:
+        """The `/gateway` document, of the simulated gateway itself."""
+        own = self.gateways[0]
+        revision, sub_revision, build = (int(part) for part in own.firmware.split("."))
+        radio = dict(zip(("revision", "subRevision", "build"),
+                         (int(part) for part in own.radio_firmware.split(".")), strict=True))
+        return {
+            "config": {
+                "hwVersion": "3.0.4", "model": own.model, "brand": "Luxaflex",
+                "serialNumber": own.serial,
+                "firmware": {
+                    "mainProcessor": {"revision": revision, "subRevision": sub_revision,
+                                      "build": build, "name": "PV_Gen3"},
+                    "radios": [radio, radio],
+                },
+                "networkStatus": {
+                    "ipAddress": own.ip, "activeInterface": self.interface,
+                    "internetState": self.internet_state, "ssid": "",
+                },
+                "mgwConfig": {"primary": not own.aux},
+                "mgwStatus": {"running": True},
+                "ip": own.ip,
+            },
+            "manifest": {"version": own.firmware},
         }
 
     # ---------------------------------------------------------------------- running
@@ -351,6 +399,10 @@ class SimulatedGateway:
     async def _home(self, request: web.Request) -> web.Response:
         await self._record(request)
         return web.json_response(self.home())
+
+    async def _gateway(self, request: web.Request) -> web.Response:
+        await self._record(request)
+        return web.json_response(self.gateway())
 
     async def _shade(self, request: web.Request) -> web.Response:
         await self._record(request)

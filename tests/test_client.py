@@ -260,12 +260,47 @@ async def test_a_silent_stream_is_taken_as_broken(
             await _next(events)
 
 
+async def test_a_gateway_reports_its_own_state(
+    client: PowerViewClient, gateway: SimulatedGateway
+) -> None:
+    status = await client.get_gateway()
+    assert (status.serial, status.is_primary, status.firmware, status.hardware_version) == (
+        "SIMULATED-0001", True, "3.2.59", "3.0.4")
+    assert (status.wifi, status.internet_connected) == (False, True)
+    gateway.interface, gateway.internet_state = "wlan0", "Disconnected"
+    status = await client.get_gateway()
+    assert (status.wifi, status.internet_connected) == (True, False)
+    assert gateway.requests[-1].path == "/gateway"
+
+
+async def test_an_auxiliary_gateway_answers_that_it_is_not_the_primary(
+    session: aiohttp.ClientSession,
+) -> None:
+    async with SimulatedGateway(serial="aux-1", primary=False) as auxiliary:
+        status = await PowerViewClient(session, auxiliary.host, read_only=True).get_gateway()
+    assert (status.serial, status.is_primary) == ("aux-1", False)
+
+
+async def test_the_home_lists_each_shade_under_the_gateway_that_serves_it(
+    client: PowerViewClient, gateway: SimulatedGateway
+) -> None:
+    _furnish(gateway)
+    gateway.add_gateway("aux-1", "Bedroom Gateway", ip="192.0.2.31")
+    gateway.add_shade(163, "Bathroom 2 Curtain", room_id=65, gateway="aux-1")
+    primary, auxiliary = (await client.get_home()).gateways
+    assert (primary.id, primary.shade_ids) == (1, (154, 271))
+    assert (auxiliary.id, auxiliary.shade_ids) == (2, (163,))
+    assert auxiliary.radio_firmware == ("3.0.43", "3.0.43")
+
+
 async def test_an_offline_gateway_cannot_be_reached_until_it_is_back(
     client: PowerViewClient, gateway: SimulatedGateway
 ) -> None:
     await gateway.close()
     with pytest.raises(CannotConnectError, match="GET /home"):
         await client.get_home()
+    with pytest.raises(CannotConnectError, match="GET /gateway"):
+        await client.get_gateway()
     with pytest.raises(CannotConnectError, match="events"):
         async with client.shade_events(idle_timeout=1):
             pass  # pragma: no cover

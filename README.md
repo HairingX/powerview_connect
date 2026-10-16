@@ -53,6 +53,21 @@ asyncio.run(main())
 Use the address of the **primary** gateway: it lists the whole home, auxiliary gateways and
 their shades included. `home.gateway_at(host)` says which gateway an address is.
 
+### What a gateway reports
+
+Each `Gateway` of the home carries its name, `ip`, `model`, `firmware`, `radio_firmware`,
+whether it `is_primary`, and `shade_ids`: the shades it serves. Every gateway, auxiliary ones
+too, answers `get_gateway()` on a client of its own address with a `GatewayStatus`: its
+`brand`, `hardware_version`, `firmware`, the network `interface` in use (`wifi` says whether it
+is on Wi-Fi) and `internet_connected`. A gateway that does not answer raises
+`CannotConnectError`.
+
+```python
+for gateway in home.gateways:
+    status = await PowerViewClient(session, gateway.ip, read_only=True).get_gateway()
+    print(gateway.name, status.firmware, status.internet_connected, gateway.shade_ids)
+```
+
 ### What a shade reports
 
 A `Shade` carries its name, room, `capabilities` (named by `capability`), `type`, `power_type`
@@ -137,6 +152,10 @@ async with SimulatedGateway() as gateway:
     gateway.finish(10)                               # at the target; motion-stopped
     print(gateway.requests[-1].body)                 # {'positions': {'primary': 0.5}}
 ```
+
+`SimulatedGateway(primary=False)` answers as an auxiliary gateway; list one in a home with
+`add_gateway(serial, name, ip=auxiliary.host)`, and give a shade to it with
+`add_shade(..., gateway=serial)`. `interface` and `internet_state` set what `/gateway` reports.
 
 It also drops streams (`drop_streams`), goes offline and comes back (`close`, `start`),
 reports a shade offline (`set_online`) and reports errors for commands (`command_errors`).

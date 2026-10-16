@@ -8,7 +8,17 @@ from typing import cast
 
 import aiohttp
 
-from ._model import Home, Shade, ShadeEvent, command_errors, parse_event, parse_home, parse_shade
+from ._model import (
+    GatewayStatus,
+    Home,
+    Shade,
+    ShadeEvent,
+    command_errors,
+    parse_event,
+    parse_gateway,
+    parse_home,
+    parse_shade,
+)
 
 DEFAULT_TIMEOUT = 10.0
 """Seconds a request may take."""
@@ -52,6 +62,7 @@ class PowerViewClient:
     Endpoints, as the Gen 3 API documents them and a gateway was measured to answer:
 
     - `GET /home`: the whole home
+    - `GET /gateway`: the gateway's own state; auxiliary gateways answer it too
     - `GET /home/shades/{id}`: one shade; its positions change live while it moves
     - `PUT /home/shades/positions?ids=...`: move; a rail not given is not changed
     - `PUT /home/shades/stop?ids=...`
@@ -130,6 +141,10 @@ class PowerViewClient:
     async def get_home(self) -> Home:
         """The whole home: gateways, shades with their positions, and scenes."""
         return parse_home(await self._get_object("/home"))
+
+    async def get_gateway(self) -> GatewayStatus:
+        """What the gateway reports of itself: its hardware, firmware and network."""
+        return parse_gateway(await self._get_object("/gateway"))
 
     async def get_shade(self, shade_id: int) -> Shade:
         """One shade, with its positions as they are now, also while it moves."""

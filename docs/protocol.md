@@ -1,6 +1,6 @@
 # The PowerView Gen 3 gateway, as measured
 
-Everything here was observed on a real gateway (firmware 3.2.59, 2026-10-15) with a Duette
+Everything here was observed on a real gateway (firmware 3.2.59, 2026-10-15 and 16) with a Duette
 top-down/bottom-up shade (shade firmware 3.0.433), or is stated by Hunter Douglas's Gen 3
 OpenAPI description where it says so. The library is built on it; the simulated gateway behaves
 as it says.
@@ -9,7 +9,8 @@ as it says.
 
 | Request | Answer |
 |---|---|
-| `GET /home` | the whole home: `gateways` (`serial`, `name`, `ip`, `model`, `v`, `aux`), `rooms` with their `shades`, `scenes` |
+| `GET /home` | the whole home: `gateways` (`_id`, `serial`, `name`, `ip`, `mac`, `ssid`, `model`, `v`, `radio1V`, `radio2V`, `aux`, `shd_Ids`), `rooms` with their `shades`, `scenes`, `remotes` |
+| `GET /gateway` | the gateway itself, as `config`: `serialNumber`, `model`, `brand`, `hwVersion`, `firmware` (`mainProcessor` and `radios`, each `revision`, `subRevision`, `build`), `networkStatus` (`ipAddress`, `activeInterface`, `internetState`, `ssid`, and `eth0`/`wlan0`), `mgwConfig.primary`, `mgwStatus.running`; auxiliary gateways answer it too |
 | `GET /home/shades/{id}` | one shade; while it moves its `positions` change live |
 | `PUT /home/shades/positions?ids=1,2` with `{"positions": {...}}` | `{"err": 0, "responses": [{"id", "bleName", "err", "hex"}], "wentViaHTTP": true}` |
 | `PUT /home/shades/stop?ids=1,2` | as for positions |
@@ -27,8 +28,16 @@ battery: `powerType` does. The API description gives `batteryStatus` 0 unknown, 
 top-down/bottom-up shade, `primary` is the bottom rail and `secondary` the top rail.
 
 The primary gateway's `/home` lists every gateway, auxiliary ones (`aux: true`) too, and every
-shade. Shades on auxiliary gateways have not been followed live yet; nor tilting,
-dual-overlapped or battery shades.
+shade. `shd_Ids` lists the shades a gateway serves; each shade was listed under one gateway.
+A gateway on Wi-Fi lists its `ssid`; one on a cable lists `""`. `radio2V` was `""` on a
+"Std" gateway, which may have one radio. `remotes` was empty in a home with remotes paired to
+their shades: the gateway does not report those remotes.
+
+`GET /gateway` was answered alike by the primary and an auxiliary gateway, but for
+`mgwConfig.primary`. `activeInterface` was `eth0` on a cable, with `eth0.type` `Wired`;
+`wlan0` for a gateway on Wi-Fi has not been measured. `internetState` was `Connected`; what it
+says without internet has not been measured. Shades on auxiliary gateways have not been followed
+live yet; nor tilting, dual-overlapped or battery shades.
 
 ## What was measured, and what follows from it
 

@@ -1,7 +1,7 @@
 """Parsing what the gateway sends, from captures of a real one."""
 import pytest
 
-from captured import COMMAND_RESPONSE, HOME, SHADE, SSE
+from captured import COMMAND_RESPONSE, GATEWAY, HOME, SHADE, SSE
 from powerview_connect import (
     BatteryStatus,
     Capabilities,
@@ -9,6 +9,7 @@ from powerview_connect import (
     Rail,
     command_errors,
     parse_event,
+    parse_gateway,
     parse_home,
     parse_positions,
     parse_shade,
@@ -152,3 +153,51 @@ def test_a_shade_off_mains_power_names_its_battery_status(
     shade = parse_shade(raw)
     assert not shade.hard_wired
     assert shade.battery is expected
+
+
+def test_each_gateway_lists_the_shades_it_serves_and_its_radio_firmware() -> None:
+    primary, auxiliary = parse_home(HOME).gateways
+    assert (primary.id, primary.shade_ids, primary.radio_firmware) == (
+        132, (154, 271), ("3.0.43", "3.0.43"))
+    assert (auxiliary.id, auxiliary.shade_ids) == (134, (163,))
+
+
+def test_a_gateway_without_its_numbers_lists_none() -> None:
+    (gateway,) = parse_home({"gateways": [
+        {"serial": "g", "shd_Ids": ["1", 2, None], "radio1V": "", "_id": "7"}]}).gateways
+    assert (gateway.id, gateway.shade_ids, gateway.radio_firmware) == (None, (2,), ())
+    (gateway,) = parse_home({"gateways": [{"serial": "g", "shd_Ids": "1,2"}]}).gateways
+    assert gateway.shade_ids == ()
+
+
+def test_a_gateway_reports_its_hardware_firmware_and_network() -> None:
+    status = parse_gateway(GATEWAY)
+    assert (status.serial, status.model, status.brand, status.hardware_version) == (
+        "gateway-aux-02", "Pro", "Luxaflex", "3.0.4")
+    assert (status.firmware, status.radio_firmware) == ("3.2.59", ("3.0.43", "3.0.43"))
+    assert (status.is_primary, status.ip, status.interface) == (False, "192.0.2.31", "eth0")
+    assert (status.wifi, status.internet_state, status.internet_connected) == (
+        False, "Connected", True)
+
+
+def test_a_gateway_that_reports_nothing_of_itself_has_none() -> None:
+    status = parse_gateway({"config": {"firmware": {"radios": [{"revision": 3}, 7]},
+                                       "mgwConfig": {"primary": "yes"}, "ip": "192.0.2.5"}})
+    assert (status.serial, status.firmware, status.radio_firmware, status.is_primary) == (
+        None, None, (), None)
+    assert (status.ip, status.wifi, status.internet_connected) == ("192.0.2.5", None, None)
+    assert parse_gateway({}).ip is None
+
+
+@pytest.mark.parametrize(("interface", "wifi"), [
+    ("eth0", False), ("wlan0", True), ("usb0", None), (None, None)])
+def test_the_interface_in_use_says_whether_a_gateway_is_on_wifi(
+    interface: str | None, wifi: bool | None
+) -> None:
+    status = parse_gateway({"config": {"networkStatus": {"activeInterface": interface}}})
+    assert status.wifi is wifi
+
+
+def test_a_gateway_reaches_the_internet_only_while_it_says_connected() -> None:
+    status = parse_gateway({"config": {"networkStatus": {"internetState": "Disconnected"}}})
+    assert status.internet_connected is False
