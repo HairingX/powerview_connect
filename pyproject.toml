@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "powerview_connect"
 dynamic = ["version"]
-description = "Async client for Hunter Douglas / Luxaflex PowerView Gen 3 gateways: single-rail moves, the shade event stream, and motion tracking - over the local HTTP API."
+description = "Async library for Hunter Douglas / Luxaflex PowerView Gen 3 gateways: a hub that keeps a whole home current from the event stream, single-rail moves, and motion tracking - over the local HTTP API."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]

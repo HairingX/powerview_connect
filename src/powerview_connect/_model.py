@@ -152,6 +152,19 @@ class Shade:
         return self.power_type == HARD_WIRED
 
     @property
+    def has_battery(self) -> bool:
+        """Whether the shade reports a power type other than mains power, so it has a battery."""
+        return self.power_type is not None and not self.hard_wired
+
+    @property
+    def battery_low(self) -> bool | None:
+        """Whether the battery is low; None without a battery or a known status."""
+        battery = self.battery
+        if not self.has_battery or battery in (None, BatteryStatus.UNKNOWN):
+            return None
+        return battery is BatteryStatus.LOW
+
+    @property
     def battery(self) -> BatteryStatus | None:
         """The battery status named, or None for a number this library does not know."""
         try:
@@ -190,6 +203,10 @@ class Home:
     def primary_gateway(self) -> Gateway | None:
         """The gateway that is not an auxiliary one, if listed."""
         return next((gateway for gateway in self.gateways if gateway.is_primary), None)
+
+    def gateway_of(self, shade_id: int) -> Gateway | None:
+        """The gateway that lists `shade_id` among the shades it serves, if any does."""
+        return next((gateway for gateway in self.gateways if shade_id in gateway.shade_ids), None)
 
     def gateway_at(self, host: str) -> Gateway | None:
         """The gateway listed with the address of `host`, which may carry a port."""
@@ -377,7 +394,22 @@ def parse_event(line: str) -> ShadeEvent | None:
     )
 
 
-def command_errors(response: object) -> list[str]:
+@dataclass(frozen=True, slots=True)
+class CommandFailure:
+    """One error the gateway reported for a command."""
+
+    shade_id: int | None
+    """The shade it is for; None for an error of the gateway itself."""
+    code: object
+    """The gateway's `err` value."""
+
+    def __str__(self) -> str:
+        """The failure, naming the shade by its id."""
+        where = "gateway" if self.shade_id is None else f"shade {self.shade_id}"
+        return f"{where} err={self.code}"
+
+
+def command_errors(response: object) -> list[CommandFailure]:
     """What went wrong, by the answer to a move or a stop; empty when nothing did.
 
     The gateway answers `{"err": 0, "responses": [{"id", "bleName", "err", "hex"}], ...}`.
@@ -385,10 +417,10 @@ def command_errors(response: object) -> list[str]:
     found = _object(response)
     if found is None:
         return []
-    errors: list[str] = []
+    failures: list[CommandFailure] = []
     if found.get("err") not in (None, 0):
-        errors.append(f"gateway err={found.get('err')}")
+        failures.append(CommandFailure(None, found.get("err")))
     for item in _objects(found.get("responses")):
         if item.get("err") not in (None, 0):
-            errors.append(f"shade {item.get('id')} ({item.get('bleName')}) err={item.get('err')}")
-    return errors
+            failures.append(CommandFailure(_int(item.get("id")), item.get("err")))
+    return failures

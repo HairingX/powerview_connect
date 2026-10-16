@@ -1,8 +1,9 @@
 """Shared test setup: a simulated gateway and a client of it, and the live tests' settings -
 `live_or_skip` skips those, and the `live` marker excludes them via `pytest -m "not live"`."""
+import asyncio
 import importlib
 import os
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 
 import aiohttp
 import pytest
@@ -53,3 +54,10 @@ async def session() -> AsyncIterator[aiohttp.ClientSession]:
 @pytest.fixture
 def client(session: aiohttp.ClientSession, gateway: SimulatedGateway) -> PowerViewClient:
     return PowerViewClient(session, gateway.host, timeout=2.0)
+
+
+async def until(condition: Callable[[], bool], timeout: float = 5.0) -> None:
+    """Wait until `condition` holds, as what the gateway sends takes a moment to arrive."""
+    async with asyncio.timeout(timeout):
+        while not condition():
+            await asyncio.sleep(0.005)
