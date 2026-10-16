@@ -584,6 +584,9 @@ class PowerViewHub:
             else:
                 self._trackers[shade_id].snapshot(shade.positions)
             self._shades[shade_id] = shade
+        for shade_id in added:
+            # A listener told of the new shade can read its state at once.
+            self._states[shade_id] = self._state_of(shade_id)
         for serial in self._set_gateways(home):
             self._emit(GatewayChanged(self._gateway_states[serial]))
         if diff:

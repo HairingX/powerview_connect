@@ -431,11 +431,19 @@ async def test_a_shade_added_to_the_home_is_added_and_one_removed_is_removed_on_
     hub: PowerViewHub, gateway: SimulatedGateway
 ) -> None:
     homes: list[HomeChanged] = []
-    hub.subscribe(lambda change: homes.append(change) if isinstance(change, HomeChanged) else None)
+    names: list[str] = []
+
+    def changed(change: Change) -> None:
+        if isinstance(change, HomeChanged):
+            homes.append(change)
+            names.extend(hub.shade(shade_id).shade.name for shade_id in change.diff.added_shades)
+
+    hub.subscribe(changed)
     gateway.add_shade(500, "New Shade", room_id=65)
     gateway.remove_shade(BLIND)
     await hub.refresh()
     assert homes[-1].diff.added_shades == {500} and not homes[-1].diff.removed_shades
+    assert names == ["New Shade"], "a listener reads a new shade's state when it is told of it"
     assert 500 in hub.shades and BLIND in hub.shades
     await hub.refresh()
     assert homes[-1].diff.removed_shades == {BLIND}
