@@ -34,8 +34,9 @@ A gateway on Wi-Fi lists its `ssid`; one on a cable lists `""`. `radio2V` was `"
 it lists for a remote has not been measured.
 
 `GET /gateway` was answered alike by the primary and an auxiliary gateway, but for
-`mgwConfig.primary`. `activeInterface` was `eth0` on a cable, with `eth0.type` `Wired`;
-`wlan0` for a gateway on Wi-Fi has not been measured. `internetState` was `Connected`; what it
+`mgwConfig.primary`. `activeInterface` was `eth0` on a cable, with `eth0.type` `Wired` and an
+empty `wlan0`; it was `wlan0` on Wi-Fi, with `wlan0.type` `Wireless`, the network in `ssid` and
+an empty `eth0`. A "Std" gateway listed one radio, a "Pro" two. `internetState` was `Connected`; what it
 says without internet has not been measured. Shades on auxiliary gateways have not been followed
 live yet; nor tilting, dual-overlapped or battery shades.
 

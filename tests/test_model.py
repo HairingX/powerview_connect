@@ -1,7 +1,7 @@
 """Parsing what the gateway sends, from captures of a real one."""
 import pytest
 
-from captured import COMMAND_RESPONSE, GATEWAY, HOME, SHADE, SSE
+from captured import COMMAND_RESPONSE, GATEWAY, GATEWAY_WIFI, HOME, SHADE, SSE
 from powerview_connect import (
     BatteryStatus,
     Capabilities,
@@ -187,6 +187,12 @@ def test_a_gateway_that_reports_nothing_of_itself_has_none() -> None:
         None, None, (), None)
     assert (status.ip, status.wifi, status.internet_connected) == ("192.0.2.5", None, None)
     assert parse_gateway({}).ip is None
+
+
+def test_a_gateway_on_wifi_says_so_and_a_std_gateway_has_one_radio() -> None:
+    status = parse_gateway(GATEWAY_WIFI)
+    assert (status.model, status.interface, status.wifi) == ("Std", "wlan0", True)
+    assert (status.radio_firmware, status.internet_connected) == (("3.0.43",), True)
 
 
 @pytest.mark.parametrize(("interface", "wifi"), [

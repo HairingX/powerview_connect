@@ -96,3 +96,27 @@ SHADE: dict[str, object] = {
     "serialNumber": "0000000000000154",
 }
 """GET /home/shades/154: a hard-wired shade, which reports a battery status too."""
+
+GATEWAY_WIFI: dict[str, object] = {
+    "config": {
+        "rev": 1, "hwVersion": "3.0.4", "model": "Std", "brand": "Luxaflex",
+        "serialNumber": "gateway-aux-04",
+        "firmware": {
+            "mainProcessor": {"revision": 3, "subRevision": 2, "build": 59, "name": "PV_Gen3"},
+            "radios": [{"revision": 3, "subRevision": 0, "build": 43}],
+        },
+        "networkStatus": {
+            "ipAddress": "192.0.2.132", "activeInterface": "wlan0",
+            "primaryMacAddress": "00:00:5E:00:53:84", "dns": [], "eth0": {},
+            "wlan0": {"name": "wlan0", "ip_address": "192.0.2.132",
+                      "mac_address": "00:00:5E:00:53:84", "type": "Wireless",
+                      "gateway_ip": "192.0.2.1"},
+            "internetState": "Connected", "ssid": "IOT",
+        },
+        "mgwConfig": {"primary": False},
+        "mgwStatus": {"running": True},
+        "ip": "192.0.2.132",
+    },
+    "manifest": {"version": "3.2.59"},
+}
+"""GET /gateway of an auxiliary "Std" gateway on Wi-Fi, trimmed as the one above."""
