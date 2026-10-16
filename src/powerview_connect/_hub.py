@@ -584,15 +584,20 @@ class PowerViewHub:
             else:
                 self._trackers[shade_id].snapshot(shade.positions)
             self._shades[shade_id] = shade
-        for shade_id in added:
-            # A listener told of the new shade can read its state at once.
-            self._states[shade_id] = self._state_of(shade_id)
+        # Every state is current before any listener is told, so each reads the home as it is.
+        changed_states: list[ShadeState] = []
+        for shade_id in home.shades:
+            state = self._state_of(shade_id)
+            if state != self._states.get(shade_id):
+                self._states[shade_id] = state
+                if shade_id not in added:
+                    changed_states.append(state)
         for serial in self._set_gateways(home):
             self._emit(GatewayChanged(self._gateway_states[serial]))
         if diff:
             self._emit(HomeChanged(home, diff))
-        for shade_id in home.shades:
-            self._update_shade(shade_id)
+        for state in changed_states:
+            self._emit(ShadeChanged(state))
 
     async def refresh_gateways(self) -> None:
         """Ask every gateway that can be asked of its own state, all at once.

@@ -466,7 +466,14 @@ async def test_a_renamed_shade_and_a_changed_scene_are_reported_as_changed(
     hub: PowerViewHub, gateway: SimulatedGateway
 ) -> None:
     homes: list[HomeChanged] = []
-    hub.subscribe(lambda change: homes.append(change) if isinstance(change, HomeChanged) else None)
+    names: list[str] = []
+
+    def changed(change: Change) -> None:
+        if isinstance(change, HomeChanged):
+            homes.append(change)
+            names.extend(hub.shade(shade_id).shade.name for shade_id in change.diff.changed_shades)
+
+    hub.subscribe(changed)
     gateway.shades[PATIO].name = "Back Door"
     gateway.scenes[216].name = "Early Morning"
     gateway.add_scene(217, "Evening", room_id=65, members={})
@@ -474,7 +481,7 @@ async def test_a_renamed_shade_and_a_changed_scene_are_reported_as_changed(
     diff = homes[-1].diff
     assert (diff.changed_shades, diff.changed_scenes, diff.added_scenes) == (
         {PATIO}, {216}, {217})
-    assert hub.shade(PATIO).shade.name == "Back Door"
+    assert hub.shade(PATIO).shade.name == "Back Door" and names == ["Back Door"]
     gateway.scenes.clear()
     await hub.refresh()
     await hub.refresh()
