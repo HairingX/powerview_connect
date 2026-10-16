@@ -6,8 +6,10 @@ from powerview_connect import (
     BatteryStatus,
     Capabilities,
     CommandFailure,
-    EventKind,
     Rail,
+)
+from powerview_connect._model import (
+    EventKind,
     command_errors,
     parse_event,
     parse_gateway,

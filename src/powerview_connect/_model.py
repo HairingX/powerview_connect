@@ -180,6 +180,14 @@ class Shade:
         except ValueError:
             return None
 
+    @property
+    def capability_name(self) -> str:
+        """A name for the capabilities, such as "Top Down Bottom Up", or "Capabilities 42"."""
+        capability = self.capability
+        if capability is None:
+            return f"Capabilities {self.capabilities}"
+        return capability.name.replace("_", " ").title()
+
 
 @dataclass(frozen=True, slots=True)
 class Scene:

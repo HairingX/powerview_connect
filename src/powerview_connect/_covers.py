@@ -126,10 +126,3 @@ def covers(shade: Shade) -> tuple[CoverSpec, ...]:
             return (CoverSpec(CoverRole.SHADE, Rail.PRIMARY, tilt=capability in _TILTS,
                               vertical=capability in _VERTICAL),)
 
-
-def capability_name(capabilities: int) -> str:
-    """A name for the gateway's `capabilities` number, such as "Top Down Bottom Up"."""
-    try:
-        return Capabilities(capabilities).name.replace("_", " ").title()
-    except ValueError:
-        return f"Capabilities {capabilities}"

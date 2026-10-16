@@ -8,7 +8,7 @@ from collections.abc import AsyncIterator, Callable
 import aiohttp
 import pytest
 
-from powerview_connect import PowerViewClient
+from powerview_connect._client import PowerViewClient
 from powerview_connect.testing import SimulatedGateway
 
 

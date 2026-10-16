@@ -2,18 +2,37 @@
 
 What the library does with what `protocol.md` says a real gateway does.
 
+## Public and internal
+
+The package's `__all__` is its whole public API, and the README documents nothing else:
+
+- **The hub:** `PowerViewHub`, its `Timing`, and the `Clock` it may be given.
+- **What it knows:** `ShadeState`, `GatewayState` and `Connection`; the home as the gateway
+  describes it: `Home`, `Shade`, `Scene`, `Gateway`, `GatewayStatus`, `Rail`, `Capabilities`,
+  `BatteryStatus`; and the covers: `CoverSpec`, `CoverRole`.
+- **Changes:** `Change`, `ShadeChanged`, `GatewayChanged`, `ConnectionChanged`, `HomeChanged`,
+  `HomeDiff`.
+- **Errors:** `PowerViewError` and its kinds, and `CommandFailure`.
+- **`powerview_connect.testing`:** the simulated gateway and the manual clock.
+
+Everything else lives in modules whose names start with an underscore and may change in any
+release: the HTTP client, the parsers, the event stream's events, the motion tracker. A program
+that needs the gateway's protocol itself is better served by the hub, or by an issue asking for
+what it lacks.
+
 ## Layers
 
-| Layer | Is | Does I/O | Keeps time |
+| Module | Is | Does I/O | Keeps time |
 |---|---|---|---|
 | `_model.py` | the gateway's documents as dataclasses, and the parsers | no | no |
 | `_covers.py` | which covers a shade is controlled as, by its capabilities | no | no |
-| `_motion.py` | `ShadeTracker`: whether one shade still moves | no | given the time |
-| `_client.py` | `PowerViewClient`: one request at a time, and the event stream | yes | no |
+| `_motion.py` | the tracker: whether one shade still moves | no | given the time |
+| `_client.py` | one request at a time, and the event stream | yes | no |
+| `_clock.py` | the `Clock` protocol, and the event loop's own clock | no | yes |
 | `_hub.py` | `PowerViewHub`: a whole home, kept current while it runs | through the client | through its `Clock` |
 
-Each layer uses only those above it, so a program can stop at any of them: parse captured
-documents, drive a tracker from its own loop, or let the hub do everything.
+Each module uses only those above it. The tests test each module on its own, internal ones
+included, and the hub against the simulated gateway.
 
 ## The hub
 

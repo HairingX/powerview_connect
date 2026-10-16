@@ -10,14 +10,12 @@ from powerview_connect import (
     CannotConnectError,
     Capabilities,
     CommandError,
-    EventKind,
-    PowerViewClient,
     Rail,
     ReadOnlyError,
     ResponseError,
-    ShadeEvent,
-    StreamIdleError,
 )
+from powerview_connect._client import PowerViewClient, StreamIdleError
+from powerview_connect._model import EventKind, ShadeEvent
 from powerview_connect.testing import Request, SimulatedGateway
 
 P, S, T = Rail.PRIMARY, Rail.SECONDARY, Rail.TILT

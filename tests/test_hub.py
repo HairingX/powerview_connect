@@ -17,8 +17,8 @@ from powerview_connect import (
     Connection,
     ConnectionChanged,
     CoverRole,
-    EventKind,
     GatewayChanged,
+    GatewayStatus,
     HomeChanged,
     PowerViewHub,
     Rail,
@@ -27,6 +27,8 @@ from powerview_connect import (
     ShadeState,
     Timing,
 )
+from powerview_connect._client import PowerViewClient
+from powerview_connect._model import EventKind
 from powerview_connect.testing import ManualClock, SimulatedGateway
 
 P, S, T = Rail.PRIMARY, Rail.SECONDARY, Rail.TILT
@@ -123,7 +125,7 @@ async def test_a_loaded_home_has_every_shade_gateway_and_scene(
     assert hub.connection is Connection.CONNECTING and not hub.available
     await hub.load()
     assert hub.connection is Connection.STREAM_DOWN and hub.available
-    assert hub.client.host == gateway.host
+    assert hub.host == gateway.host and hub.base_url == f"http://{gateway.host}"
     window = hub.shade(TDBU)
     assert (window.id, window.shade.name, window.positions) == (
         TDBU, "Kitchen Window", {P: 0.0, S: 0.71, T: 0.0})
@@ -285,7 +287,7 @@ async def test_a_read_only_hub_follows_the_home_and_refuses_every_command(
         with pytest.raises(ReadOnlyError):
             await command
     assert all(request.method == "GET" for request in gateway.requests)
-    assert hub.client.read_only and hub.available
+    assert hub.read_only and hub.available
 
 
 async def test_an_error_the_gateway_reports_for_a_command_is_raised(
@@ -595,11 +597,14 @@ async def test_an_error_that_is_not_a_gateways_is_raised_after_the_others_are_ta
         gateway.add_gateway("aux-1", "Bedroom Gateway", ip=auxiliary.host)
         hub = PowerViewHub(session, gateway.host)
         await hub.load()
+        answer = PowerViewClient.get_gateway
 
-        async def broken() -> None:
-            raise RuntimeError("a bug")
+        async def broken(client: PowerViewClient) -> GatewayStatus:
+            if client.host == gateway.host:
+                raise RuntimeError("a bug")
+            return await answer(client)
 
-        monkeypatch.setattr(hub.client, "get_gateway", broken)
+        monkeypatch.setattr(PowerViewClient, "get_gateway", broken)
         with pytest.raises(RuntimeError, match="a bug"):
             await hub.refresh_gateways()
         assert hub.gateways["aux-1"].reachable
@@ -611,11 +616,11 @@ async def test_a_failing_task_of_the_hub_is_logged_and_goes_on(
 ) -> None:
     calls: list[int] = []
 
-    async def broken() -> None:
+    async def broken(client: PowerViewClient) -> None:
         calls.append(1)
         raise RuntimeError("a bug")
 
-    monkeypatch.setattr(hub.client, "get_gateway", broken)
+    monkeypatch.setattr(PowerViewClient, "get_gateway", broken)
     await _advance_until(clock, lambda: len(calls) >= 2, limit=180)
     assert "goes on" in caplog.text
 

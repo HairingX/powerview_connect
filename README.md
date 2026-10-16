@@ -1,7 +1,8 @@
 # PowerView Connect
 
-An async Python client for **Hunter Douglas / Luxaflex PowerView Gen 3** gateways, over their
-local HTTP API and shade event stream.
+An async Python library for **Hunter Douglas / Luxaflex PowerView Gen 3** homes, over the
+gateway's local HTTP API and shade event stream. It knows how PowerView works, so the program
+using it does not have to: a script, a service, or a home automation platform.
 
 It is built on what a real Gen 3 gateway was measured to do (see
 [the protocol notes](https://github.com/HairingX/powerview_connect/blob/main/docs/protocol.md)):
@@ -10,10 +11,8 @@ It is built on what a real Gen 3 gateway was measured to do (see
   is, so a command to the top rail of a top-down/bottom-up shade can never undo a command to the
   bottom rail sent a moment before.
 - **The event stream says when a shade starts and stops moving**, whatever moved it: this
-  client, the PowerView app, a scene, a voice assistant. Nothing needs polling while nothing
-  moves.
-- **A moving shade reports its live position**, so a shade can be followed by polling it, and
-  only it, while it moves. `ShadeTracker` decides when a move has ended.
+  library, the PowerView app, a scene, a voice assistant. Nothing is read while nothing moves.
+- **A moving shade reports its live position**, so it is read, and only it, while it moves.
 
 aiohttp is its only dependency. It is unofficial: PowerView is a trademark of Hunter Douglas,
 which has nothing to do with this library.
@@ -102,13 +101,13 @@ same changes for an `async for`.
 
 ### Covers
 
-`covers(shade)` - also `ShadeState.covers` - says how a shade is controlled: a `CoverSpec` for
-each of its covers, by its capabilities. A top-down/bottom-up shade has `TOP` and `BOTTOM`, a
+`ShadeState.covers` says how a shade is controlled: a `CoverSpec` for each of its covers, by
+its capabilities. A top-down/bottom-up shade has `TOP` and `BOTTOM`, a
 dual-overlapped one `FRONT` and `REAR`, a tilt-only shade `VANES`, and others one `SHADE`. Each
 says which rail it moves, whether it also tilts the vanes, and whether its rail's 0.0 is open
 (a top-down shade). Its `openness`, `closed` and `direction` read a state's positions, with that
 inversion applied, as 0.0 closed to 1.0 open; `hub.move_cover` and `hub.tilt_cover` move it by
-openness. `capability_name` names a shade's capabilities.
+openness.
 
 ### Commands
 
@@ -121,10 +120,8 @@ openness. `capability_name` names a shade's capabilities.
 | `hub.activate_scene(id)` | a scene stored on the gateway |
 | `hub.refresh()`, `hub.refresh_gateways()` | reads the home, or asks each gateway of its state, now |
 
-A shade or scene the home does not have raises `KeyError` before anything is sent. A command
-the gateway reports an error for raises `CommandError`, whose `failures` name each shade by
-its id and the gateway's error code. A gateway that does not answer raises
-`CannotConnectError`.
+A read-only hub (`PowerViewHub(..., read_only=True)`) follows the home and refuses every
+command. See Errors for what a command raises.
 
 ### Timing, clock and logging
 
@@ -135,51 +132,33 @@ its id and the gateway's error code. A gateway that does not answer raises
   (`gateway_interval`, 1 min); how many moving shades are read at once
   (`max_concurrent_reads`, 3); the waits before reopening the stream; and when a move without
   a stop event has ended.
-- **`clock`** is anything with `monotonic()` and `async sleep(seconds)`; `SystemClock` by
-  default, `testing.ManualClock` in tests.
+- **`clock`** is any `Clock`: something with `monotonic()` and `async sleep(seconds)`. The
+  event loop's own time by default, `testing.ManualClock` in tests.
 - **The logger** is `powerview_connect` by default. At debug level it logs every event and
   every request with how long it took. It names shades and gateways by id and name, never by
   serial number or Bluetooth name.
 
-## The client underneath
+## The home
 
-`PowerViewClient` sends one request at a time, for a program that wants to do the following
-itself:
+`hub.home` is a `Home`: its `gateways`, `shades` by id, and `scenes`. `home.primary_gateway` is
+the gateway that is not an auxiliary one, `home.gateway_at(host)` the one at an address, and
+`home.gateway_of(id)` the one that serves a shade.
 
-```python
-client = PowerViewClient(session, "<gateway-ip>")
-home = await client.get_home()                     # gateways, shades, scenes
-await client.set_positions([154], secondary=0.5)   # the top rail only
-async with client.shade_events(idle_timeout=360) as events:
-    async for event in events:
-        print(event.kind, event.shade_id, dict(event.current))
-```
+### Gateways
 
-`home.gateway_at(host)` says which gateway an address is, and `home.gateway_of(id)` which
-gateway serves a shade.
+A `Gateway` carries its `name`, `ip`, `model`, `firmware`, `radio_firmware`, whether it
+`is_primary`, and `shade_ids`: the shades it serves. The `status` of its `GatewayState` is a
+`GatewayStatus`, what the gateway reports of itself: its `brand`, `hardware_version`,
+`firmware`, the network `interface` in use (`wifi` says whether it is on Wi-Fi) and
+`internet_connected`. Auxiliary gateways are asked at their own address, read-only.
 
-### What a gateway reports
+### Shades
 
-Each `Gateway` of the home carries its name, `ip`, `model`, `firmware`, `radio_firmware`,
-whether it `is_primary`, and `shade_ids`: the shades it serves. Every gateway, auxiliary ones
-too, answers `get_gateway()` on a client of its own address with a `GatewayStatus`: its
-`brand`, `hardware_version`, `firmware`, the network `interface` in use (`wifi` says whether it
-is on Wi-Fi) and `internet_connected`. A gateway that does not answer raises
-`CannotConnectError`.
-
-```python
-for gateway in home.gateways:
-    status = await PowerViewClient(session, gateway.ip, read_only=True).get_gateway()
-    print(gateway.name, status.firmware, status.internet_connected, gateway.shade_ids)
-```
-
-### What a shade reports
-
-A `Shade` carries its name, room, `capabilities` (named by `capability`), `type`, `power_type`
-(1 is hard-wired), `firmware`, `positions`, and `signal_strength`: how well the gateway hears
-it, in dBm, closer to 0 being stronger. `battery` names the battery status (`BatteryStatus`); a
-hard-wired shade reports one too, so it means something only where `has_battery` is true;
-`battery_low` says whether that battery is low.
+A `Shade` carries its `name`, `room_name`, `capabilities` (named by `capability` and
+`capability_name`), `type`, `power_type`, `firmware`, `positions`, and `signal_strength`: how
+well the gateway hears it, in dBm, closer to 0 being stronger. `battery` names its battery
+status (`BatteryStatus`). A hard-wired shade reports one too, so it means something only where
+`has_battery` is true; `battery_low` says whether that battery is low.
 
 ### Positions
 
@@ -192,71 +171,40 @@ Every rail runs from `0.0`, fully closed, to `1.0`, fully open:
 | `Rail.TILT` | the vanes of a shade that tilts | closed | open |
 
 A top-down/bottom-up shade's own firmware stops a rail where it meets the other one, so a move
-that would cross them is safe to send.
+that would cross them is safe to send. A cover's openness (see Covers) has every rail's
+direction sorted out already.
 
-### Commands
+## Errors
 
-| Method | Sends |
+| Error | When |
 |---|---|
-| `set_positions(ids, primary=, secondary=, tilt=, velocity=)` | only the rails given, to every shade in `ids`, in one request |
-| `stop(ids)` | stop where they are |
-| `activate_scene(scene_id)` | a scene stored on the gateway |
-| `jog(shade_id)` | a short move back and forth, to show which shade it is |
+| `CannotConnectError` | the gateway does not answer |
+| `ResponseError` | it answered with something other than what was asked for |
+| `CommandError` | it reported an error for a command; `failures` name each shade by id, with the gateway's code |
+| `ReadOnlyError` | a read-only hub refused a command before sending it |
 
-A command the gateway reports an error for raises `CommandError`. A client made with
-`read_only=True` refuses every command with `ReadOnlyError` before anything is sent.
-
-### Events
-
-`shade_events(idle_timeout)` opens the event stream; iterating it yields a `ShadeEvent` for
-each event, with `kind`, `shade_id`, `current` and, for a motion start, `target` and `eta`:
-
-| `EventKind` | When |
-|---|---|
-| `MOTION_STARTED` | a move starts, from any source; the motor follows some seconds later |
-| `MOTION_STOPPED` | a move ends, with the final positions |
-| `BATTERY_ALERT` | right before every move, by hard-wired shades too |
-| `SHADE_ONLINE`, `SHADE_OFFLINE` | a shade is reachable again, or no longer |
-
-The stream ends when the gateway closes it, raises `CannotConnectError` when it breaks, and
-`StreamIdleError`, a kind of `CannotConnectError`, when it sends nothing for `idle_timeout`
-seconds; the gateway sends nothing while nothing moves, so reopen it. `eta` is the gateway's estimate of the move's time, which real moves took about
-twice as long as.
-
-### Following a move
-
-`ShadeTracker` follows one shade. It does no I/O and reads no clock: give it the events,
-the positions polled while the shade moves, and the commands sent, each with the time.
-
-```python
-tracker = ShadeTracker(shade.positions)
-tracker.motion_started(event, now=time.monotonic())        # or tracker.command(now, {Rail.PRIMARY: 0.2})
-while tracker.poll((await client.get_shade(shade.id)).positions, now=time.monotonic()):
-    print(tracker.current[Rail.PRIMARY], tracker.direction(Rail.PRIMARY))
-    await asyncio.sleep(1)
-```
-
-A move ends with whichever comes first: motion-stopped, the target reached and still for
-1.5 s, no change for 6 s after the shade moved, no move at all 25 s after the command, or a
-timeout.
+All are a `PowerViewError`. A shade or scene the home does not have raises `KeyError` before
+anything is sent.
 
 ## Testing your code
 
 `powerview_connect.testing.SimulatedGateway` is a gateway on 127.0.0.1 that answers as a real
-one was measured to, for your own tests:
+one was measured to, and `ManualClock` a clock that moves only when the test advances it:
 
 ```python
-from powerview_connect import Capabilities, PowerViewClient, Rail
-from powerview_connect.testing import SimulatedGateway
+from powerview_connect import Capabilities, PowerViewHub, Rail
+from powerview_connect.testing import ManualClock, SimulatedGateway
 
+clock = ManualClock()
 async with SimulatedGateway() as gateway:
     gateway.add_room(1, "Living Room")
     gateway.add_shade(10, "Window", room_id=1, capabilities=Capabilities.TOP_DOWN_BOTTOM_UP)
-    client = PowerViewClient(session, gateway.host)
-    await client.set_positions([10], primary=0.5)    # motion-started on every stream
-    gateway.move(10, {Rail.PRIMARY: 0.2})            # part of the way, as a poll sees it
-    gateway.finish(10)                               # at the target; motion-stopped
-    print(gateway.requests[-1].body)                 # {'positions': {'primary': 0.5}}
+    async with PowerViewHub(session, gateway.host, clock=clock) as hub:
+        await hub.move(10, {Rail.PRIMARY: 0.5})      # motion-started on every stream
+        gateway.move(10, {Rail.PRIMARY: 0.2})        # part of the way, as a read sees it
+        await clock.advance(1)                       # the hub reads the moving shade
+        gateway.finish(10)                           # at the target; motion-stopped
+        print(gateway.requests[-1].body)
 ```
 
 `SimulatedGateway(primary=False)` answers as an auxiliary gateway; list one in a home with
@@ -264,8 +212,7 @@ async with SimulatedGateway() as gateway:
 `add_shade(..., gateway=serial)`. `interface` and `internet_state` set what `/gateway` reports.
 
 `refuse_streams` answers the event stream with HTTP 503, `break_streams()` cuts open streams
-off mid-line, and `shade_read_delay` slows each read of a shade down, as on a busy gateway. A
-hub's tests take a `testing.ManualClock`, which moves only on `await clock.advance(seconds)`.
+off mid-line, and `shade_read_delay` slows each read of a shade down, as on a busy gateway.
 
 It also drops streams (`drop_streams`), goes offline and comes back (`close`, `start`),
 reports a shade offline (`set_online`) and reports errors for commands (`command_errors`).

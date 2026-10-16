@@ -1,15 +1,8 @@
 """The covers each kind of shade is controlled as, and how far each is open."""
 import pytest
 
-from powerview_connect import (
-    Capabilities,
-    CoverRole,
-    CoverSpec,
-    Rail,
-    Shade,
-    capability_name,
-    covers,
-)
+from powerview_connect import Capabilities, CoverRole, CoverSpec, Rail, Shade
+from powerview_connect._covers import covers
 
 P, S, T = Rail.PRIMARY, Rail.SECONDARY, Rail.TILT
 
@@ -68,5 +61,5 @@ def test_a_cover_refuses_what_it_cannot_do() -> None:
 
 
 def test_capabilities_are_named_and_a_number_not_known_too() -> None:
-    assert capability_name(Capabilities.TOP_DOWN_BOTTOM_UP) == "Top Down Bottom Up"
-    assert capability_name(42) == "Capabilities 42"
+    assert _shade(Capabilities.TOP_DOWN_BOTTOM_UP).capability_name == "Top Down Bottom Up"
+    assert _shade(42).capability_name == "Capabilities 42"

@@ -241,6 +241,8 @@ class PowerViewHub:
         self._home: Home | None = None
         self._shades: dict[int, Shade] = {}
         self._trackers: dict[int, ShadeTracker] = {}
+        self._offline: set[int] = set()
+        """The shades the gateway last reported offline."""
         self._states: dict[int, ShadeState] = {}
         self._missing: dict[tuple[str, int | str], int] = {}
         self._gateway_clients: dict[str, PowerViewClient] = {}
@@ -257,9 +259,19 @@ class PowerViewHub:
     # ---------------------------------------------------------------- what is known
 
     @property
-    def client(self) -> PowerViewClient:
-        """The client of the primary gateway."""
-        return self._client
+    def host(self) -> str:
+        """The primary gateway's address, as it is reached, with a port where one was given."""
+        return self._client.host
+
+    @property
+    def base_url(self) -> str:
+        """The URL the primary gateway's API is under, such as `http://192.0.2.32`."""
+        return self._client.base_url
+
+    @property
+    def read_only(self) -> bool:
+        """Whether every command is refused before it reaches the gateway."""
+        return self._client.read_only
 
     @property
     def home(self) -> Home:
@@ -411,7 +423,7 @@ class PowerViewHub:
             directions={rail: direction for rail in tracker.current
                         if (direction := tracker.direction(rail))},
             moving=tracker.moving,
-            online=tracker.online,
+            online=shade_id not in self._offline,
             eta=tracker.eta,
         )
 
@@ -578,6 +590,7 @@ class PowerViewHub:
         for shade_id in removed:
             del self._shades[shade_id], self._trackers[shade_id], self._states[shade_id]
             self._moving.discard(shade_id)
+            self._offline.discard(shade_id)
         for shade_id, shade in home.shades.items():
             if shade_id in added:
                 self._trackers[shade_id] = self._new_tracker(shade)
@@ -721,9 +734,9 @@ class PowerViewHub:
                 tracker.motion_stopped(event)
                 self._moving.discard(event.shade_id)
             case EventKind.SHADE_ONLINE:
-                tracker.online = True
+                self._offline.discard(event.shade_id)
             case EventKind.SHADE_OFFLINE:
-                tracker.online = False
+                self._offline.add(event.shade_id)
             case _:
                 # A battery alert comes before every move, from hard-wired shades too.
                 return
