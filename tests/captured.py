@@ -47,13 +47,44 @@ HOME: dict[str, object] = {
     "scenes": [{"_id": 216, "name": "Kitchen Dining", "room_Id": 65,
                 "members": [{"shd_Id": 154, "pos": {"pos1": 0, "pos2": 4580}}]}],
     "gateways": [
-        {"v": "3.2.59", "serial": "gateway-primary-01", "model": "Pro",
-         "name": "Main Room Gateway", "ip": "192.0.2.32", "aux": False},
-        {"v": "3.2.59", "serial": "gateway-aux-02", "model": "Pro",
-         "name": "Bedroom Gateway", "ip": "192.0.2.31", "aux": True},
+        {"v": "3.2.59", "radio1V": "3.0.43", "ip": "192.0.2.32", "mac": "00:00:5E:00:53:32",
+         "_id": 132, "name": "Main Room Gateway", "aux": False, "ssid": "", "model": "Pro",
+         "shd_Ids": [154, 271], "serial": "gateway-primary-01", "radio2V": "3.0.43"},
+        {"radio1V": "3.0.43", "_id": 134, "ssid": "", "name": "Bedroom Gateway",
+         "mac": "00:00:5E:00:53:31", "v": "3.2.59", "ip": "192.0.2.31", "radio2V": "3.0.43",
+         "aux": True, "shd_Ids": [163], "serial": "gateway-aux-02", "model": "Pro"},
     ],
+    "remotes": [],
 }
-"""/home, trimmed to two shades and one scene; its structure is verbatim."""
+"""/home, trimmed to two shades, one scene and two of four gateways; its structure is verbatim."""
+
+GATEWAY: dict[str, object] = {
+    "config": {
+        "rev": 1, "hwVersion": "3.0.4", "model": "Pro", "brand": "Luxaflex",
+        "serialNumber": "gateway-aux-02",
+        "firmware": {
+            "mainProcessor": {"revision": 3, "subRevision": 2, "build": 59, "name": "PV_Gen3"},
+            "radios": [{"revision": 3, "subRevision": 0, "build": 43},
+                       {"revision": 3, "subRevision": 0, "build": 43}],
+        },
+        "rangeMapper": {"minRSSI": -88, "levelingSeconds": 4},
+        "networkConfig": {"staticIpEnabled": False, "wifiCountryCode": "00"},
+        "networkStatus": {
+            "ipAddress": "192.0.2.31", "activeInterface": "eth0",
+            "primaryMacAddress": "00:00:5E:00:53:31", "dns": [],
+            "eth0": {"name": "eth0", "ip_address": "192.0.2.31",
+                     "mac_address": "00:00:5E:00:53:31",
+                     "type": "Wired", "gateway_ip": "192.0.2.1"},
+            "wlan0": {}, "internetState": "Connected", "ssid": "",
+        },
+        "mgwConfig": {"primary": False},
+        "mgwStatus": {"running": True},
+        "ip": "192.0.2.31",
+    },
+    "manifest": {"version": "3.2.59"},
+}
+"""GET /gateway of an auxiliary gateway, trimmed of its cloud and component details and its netmask. The primary
+gateway answers the same, with `mgwConfig.primary` true."""
 
 SHADE: dict[str, object] = {
     "id": 154, "type": 8, "name": "S2l0Y2hlbiBNaWRkbGUgQ3VydGFpbg==",
@@ -65,3 +96,27 @@ SHADE: dict[str, object] = {
     "serialNumber": "0000000000000154",
 }
 """GET /home/shades/154: a hard-wired shade, which reports a battery status too."""
+
+GATEWAY_WIFI: dict[str, object] = {
+    "config": {
+        "rev": 1, "hwVersion": "3.0.4", "model": "Std", "brand": "Luxaflex",
+        "serialNumber": "gateway-aux-04",
+        "firmware": {
+            "mainProcessor": {"revision": 3, "subRevision": 2, "build": 59, "name": "PV_Gen3"},
+            "radios": [{"revision": 3, "subRevision": 0, "build": 43}],
+        },
+        "networkStatus": {
+            "ipAddress": "192.0.2.132", "activeInterface": "wlan0",
+            "primaryMacAddress": "00:00:5E:00:53:84", "dns": [], "eth0": {},
+            "wlan0": {"name": "wlan0", "ip_address": "192.0.2.132",
+                      "mac_address": "00:00:5E:00:53:84", "type": "Wireless",
+                      "gateway_ip": "192.0.2.1"},
+            "internetState": "Connected", "ssid": "IOT",
+        },
+        "mgwConfig": {"primary": False},
+        "mgwStatus": {"running": True},
+        "ip": "192.0.2.132",
+    },
+    "manifest": {"version": "3.2.59"},
+}
+"""GET /gateway of an auxiliary "Std" gateway on Wi-Fi, trimmed as the one above."""

@@ -83,6 +83,45 @@ class Gateway:
     model: str | None
     firmware: str | None
     is_primary: bool
+    id: int | None = None
+    """The gateway's number in the home."""
+    radio_firmware: tuple[str, ...] = ()
+    shade_ids: tuple[int, ...] = ()
+    """The shades the gateway serves."""
+
+
+@dataclass(frozen=True, slots=True)
+class GatewayStatus:
+    """What a gateway reports of itself."""
+
+    serial: str | None
+    model: str | None
+    brand: str | None
+    hardware_version: str | None
+    firmware: str | None
+    radio_firmware: tuple[str, ...]
+    is_primary: bool | None
+    ip: str | None
+    interface: str | None
+    """The network interface in use: `eth0` is the wired one."""
+    internet_state: str | None
+    """`Connected` while the gateway reaches the internet."""
+
+    @property
+    def wifi(self) -> bool | None:
+        """Whether the gateway is on Wi-Fi, or None for an interface this library does not know."""
+        if self.interface is None:
+            return None
+        if self.interface.startswith("eth"):
+            return False
+        if self.interface.startswith("wlan"):
+            return True
+        return None
+
+    @property
+    def internet_connected(self) -> bool | None:
+        """Whether the gateway reaches the internet, or None when it does not say."""
+        return None if self.internet_state is None else self.internet_state == "Connected"
 
 
 @dataclass(frozen=True, slots=True)
@@ -207,6 +246,12 @@ def parse_positions(raw: object) -> dict[Rail, float]:
     return positions
 
 
+def _ints(value: object) -> tuple[int, ...]:
+    if not isinstance(value, list):
+        return ()
+    return tuple(found for item in cast(list[object], value) if (found := _int(item)) is not None)
+
+
 def _firmware(raw: object) -> str | None:
     found = _object(raw)
     if found is None:
@@ -253,6 +298,10 @@ def parse_home(raw: Mapping[str, object]) -> Home:
             model=_text(gateway.get("model")),
             firmware=_text(gateway.get("v")),
             is_primary=gateway.get("aux") is not True,
+            id=_int(gateway.get("_id")),
+            radio_firmware=tuple(
+                radio for key in ("radio1V", "radio2V") if (radio := _text(gateway.get(key)))),
+            shade_ids=_ints(gateway.get("shd_Ids")),
         )
         for gateway in _objects(raw.get("gateways"))
         if (serial := _text(gateway.get("serial"))) is not None
@@ -275,6 +324,28 @@ def parse_home(raw: Mapping[str, object]) -> Home:
         gateways=gateways,
         shades=shades,
         scenes=scenes,
+    )
+
+
+def parse_gateway(raw: Mapping[str, object]) -> GatewayStatus:
+    """What a gateway reports of itself, from the `/gateway` document."""
+    config = _object(raw.get("config")) or {}
+    firmware = _object(config.get("firmware")) or {}
+    network = _object(config.get("networkStatus")) or {}
+    primary = (_object(config.get("mgwConfig")) or {}).get("primary")
+    return GatewayStatus(
+        serial=_text(config.get("serialNumber")),
+        model=_text(config.get("model")),
+        brand=_text(config.get("brand")),
+        hardware_version=_text(config.get("hwVersion")),
+        firmware=_firmware(firmware.get("mainProcessor")),
+        radio_firmware=tuple(
+            found for radio in _objects(firmware.get("radios"))
+            if (found := _firmware(radio)) is not None),
+        is_primary=primary if isinstance(primary, bool) else None,
+        ip=_text(network.get("ipAddress")) or _text(config.get("ip")),
+        interface=_text(network.get("activeInterface")),
+        internet_state=_text(network.get("internetState")),
     )
 
 
