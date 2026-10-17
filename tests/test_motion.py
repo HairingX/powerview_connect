@@ -147,3 +147,28 @@ def test_a_rail_at_its_target_does_not_move() -> None:
     tracker = ShadeTracker({P: 0.5, S: 0.2})
     tracker.command(0.0, {P: 0.9, S: 0.2})
     assert tracker.direction(S) == 0
+
+
+def test_the_targets_of_a_move_are_kept_once_it_ends_until_the_next_begins() -> None:
+    tracker = ShadeTracker({P: 0.0, S: 0.0, T: 0.0})
+    tracker.motion_started(ShadeEvent("motion-started", 1, {P: 0.0}, {P: 1.0, S: 0.0}, 9),
+                           now=0.0)
+    assert tracker.last_target == {}
+    tracker.motion_stopped(ShadeEvent("motion-stopped", 1, {P: 0.9}, {}, None))
+    assert tracker.last_target == {P: 1.0, S: 0.0}
+    tracker.motion_stopped(ShadeEvent("motion-stopped", 1, {P: 0.9}, {}, None))
+    assert tracker.last_target == {P: 1.0, S: 0.0}
+    tracker.command(1.0, {P: 0.5})
+    assert tracker.last_target == {}
+
+
+def test_a_stop_sent_forgets_the_targets_of_the_move() -> None:
+    tracker = ShadeTracker({P: 0.0, S: 0.0, T: 0.0})
+    tracker.command(0.0, {P: 1.0})
+    tracker.stop_requested(1.0)
+    tracker.motion_stopped(ShadeEvent("motion-stopped", 1, {P: 0.9}, {}, None))
+    assert tracker.last_target == {}
+    tracker.command(2.0, {P: 0.2})
+    tracker.motion_stopped(ShadeEvent("motion-stopped", 1, {P: 0.2}, {}, None))
+    tracker.stop_requested(3.0)
+    assert tracker.last_target == {}

@@ -98,6 +98,7 @@ same changes for an `async for`.
 | `GatewayChanged` | a gateway answered or stopped answering, or reported another state |
 | `ConnectionChanged` | the hub's connection to the primary gateway changed |
 | `HomeChanged` | shades, scenes or gateways were added, removed or changed; its `diff` says which |
+| `ShadeStalled` | a cover stopped short of fully open and is being raised, or the raising ended; see below |
 
 ### Covers
 
@@ -122,6 +123,31 @@ openness.
 
 A read-only hub (`PowerViewHub(..., read_only=True)`) follows the home and refuses every
 command. See Errors for what a command raises.
+
+### Covers that stop short of fully open
+
+A curtain sent fully open sometimes stops a little short, as the fabric gathering at the top
+takes room. Lifted the rest of the way in smaller steps, the fabric folds and it opens fully.
+`PowerViewHub(..., stall_recovery=StallRecovery())` does that, whoever started the move: this
+hub, the PowerView app, a voice assistant or a scene. It is off by default, and a read-only hub
+never does it.
+
+- **What counts.** A `motion-stopped` event for a `SHADE` cover, or the `BOTTOM` cover of a
+  top-down/bottom-up shade with its top rail at the top, whose move aimed fully open and which
+  stopped from `min_openness` (0.8) to just short of open. A stop below `min_openness` is taken
+  as meant; a stop this hub sent is never a stall, nor is a move the hub saw end without an
+  event.
+- **What it does.** It raises the cover the rest of the way in `steps` (3) even steps, moving
+  only that cover's rail; after each step has stopped it waits `pause` (10 s) and checks that
+  the cover rose.
+- **What it says.** `ShadeStalled(shade_id, role, openness, outcome)` once as it starts
+  (`RECOVERING`, where the cover stopped), and once as it ends, where the cover ended:
+  `RECOVERED`, fully open; `GAVE_UP`, a step did not raise it, did not stop within
+  `Timing.min_timeout`, or could not be sent; or `INTERRUPTED`, a command of yours, a move from
+  elsewhere, the shade going offline or leaving the home, or `run` ending.
+
+It works only while `run` runs, and each recovery is a task of `run`'s own, so nothing outlives
+it. Each stalled move is raised once: the steps' own stops are not looked at again.
 
 ### Timing, clock and logging
 
@@ -204,6 +230,7 @@ async with SimulatedGateway() as gateway:
         gateway.move(10, {Rail.PRIMARY: 0.2})        # part of the way, as a read sees it
         await clock.advance(1)                       # the hub reads the moving shade
         gateway.finish(10)                           # at the target; motion-stopped
+        # gateway.finish(10, at={Rail.PRIMARY: 0.9}) ends it short of the target instead
         print(gateway.requests[-1].body)
 ```
 
