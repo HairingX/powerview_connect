@@ -9,8 +9,9 @@ import pytest
 ROOT = Path(__file__).parents[1]
 
 ALLOWED_NETWORKS = [ipaddress.ip_network(net) for net in (
-    "127.0.0.0/8", "0.0.0.0/32", "192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24")]
-"""Loopback, and the ranges RFC 5737 sets aside for documentation."""
+    "127.0.0.0/8", "0.0.0.0/32", "192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24",
+    "255.255.0.0/16")]
+"""Loopback, the ranges RFC 5737 sets aside for documentation, and netmasks."""
 
 DOCUMENTATION_MAC = "00:00:5e:00:53:"
 """The range RFC 7042 sets aside for documentation."""
