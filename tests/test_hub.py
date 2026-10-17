@@ -8,6 +8,7 @@ import aiohttp
 import pytest
 from aiohttp import web
 
+from captured_scene import EVENTS, SHADES
 from conftest import until
 from powerview_connect import (
     CannotConnectError,
@@ -208,6 +209,59 @@ async def test_a_shade_that_cannot_be_read_while_it_moves_ends_its_move_in_time(
     gateway.remove_shade(PATIO)
     await _settle(clock, 27.0)
     await until(lambda: not hub.shade(PATIO).moving)
+
+
+async def test_every_shade_a_scene_moved_in_a_real_home_is_followed_until_its_own_stop(
+    session: aiohttp.ClientSession, gateway: SimulatedGateway, clock: ManualClock
+) -> None:
+    """The events are a real home's; the positions between them are made up, as none were logged."""
+    started = {shade_id: (at, current, target) for at, kind, shade_id, current, target, _ in EVENTS
+               if kind == EventKind.MOTION_STARTED}
+    stopped = {shade_id: at for at, kind, shade_id, *_ in EVENTS if kind == EventKind.MOTION_STOPPED}
+    gateway.add_room(1, "Home")
+    for shade_id, (shade_type, capabilities, battery_status, _) in SHADES.items():
+        gateway.add_shade(shade_id, f"Shade {shade_id}", room_id=1, capabilities=capabilities,
+                          shade_type=shade_type, battery_status=battery_status,
+                          positions=started[shade_id][1])
+    hub = PowerViewHub(session, gateway.host, timing=TIMING, clock=clock)
+    await hub.load()
+    task = asyncio.create_task(hub.run())
+    await until(lambda: hub.connection is Connection.CONNECTED)
+    begin = clock.monotonic()
+    moved: set[int] = set()
+    ended: dict[int, float] = {}
+
+    def note_end(change: Change) -> None:
+        if isinstance(change, ShadeChanged):
+            if change.state.moving:
+                moved.add(change.state.shade.id)
+            elif change.state.shade.id in moved:
+                ended.setdefault(change.state.shade.id, clock.monotonic() - begin)
+
+    hub.subscribe(note_end)
+    pending = list(EVENTS)
+    for step in range(round(92 / 0.5)):
+        now = step * 0.5
+        for shade_id, (at, current, target) in started.items():
+            if at <= now < stopped[shade_id]:
+                done = (now - at) / (stopped[shade_id] - at)
+                gateway.move(shade_id, {P: round(current[P] + done * (target[P] - current[P]), 2)})
+        while pending and pending[0][0] <= now:
+            _, kind, shade_id, _, target, eta = pending.pop(0)
+            if kind == EventKind.MOTION_STARTED:
+                gateway.emit(kind, shade_id, targetPositions={**target, "etaInSeconds": eta})
+            elif kind == EventKind.MOTION_STOPPED:
+                gateway.move(shade_id, started[shade_id][2])
+                gateway.emit(kind, shade_id)
+            else:
+                gateway.emit(kind, shade_id, batteryLevel=1)
+        await clock.advance(0.5)
+        await asyncio.sleep(0.03)
+    for shade_id, at in stopped.items():
+        assert at <= ended[shade_id] <= at + 1.0, shade_id
+        assert hub.shade(shade_id).positions[P] == 1.0
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
 
 
 async def test_a_read_during_a_move_takes_signal_strength_and_battery(
