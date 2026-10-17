@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import re
 from collections.abc import AsyncGenerator, AsyncIterator, Iterable
 from contextlib import asynccontextmanager
 from typing import cast
@@ -23,6 +25,34 @@ from ._model import (
 
 DEFAULT_TIMEOUT = 10.0
 """Seconds a request may take."""
+
+_LOG = logging.getLogger("powerview_connect")
+_PRIVATE = frozenset({"serial", "serialNumber", "bleName", "mac", "mac_address",
+                      "primaryMacAddress", "homeId", "key", "latitude", "longitude"})
+"""Keys whose values identify a person's devices or home."""
+
+
+def anonymized(value: object) -> object:
+    """`value` with every value of a key in `_PRIVATE` replaced, keeping the shape and the type."""
+    if isinstance(value, dict):
+        return {key: _hidden(item) if key in _PRIVATE else anonymized(item)
+                for key, item in cast(dict[str, object], value).items()}
+    if isinstance(value, list):
+        return [anonymized(item) for item in cast(list[object], value)]
+    return value
+
+
+def _hidden(value: object) -> object:
+    if isinstance(value, str):
+        return "<hidden>"
+    if isinstance(value, int | float) and not isinstance(value, bool):
+        return 0
+    return anonymized(value)
+
+
+def _kind(method: str, path: str) -> str:
+    """The request with its ids left out, so one answer of each kind is logged."""
+    return f"{method} " + re.sub(r"/\d+", "/{id}", path.split("?")[0])
 
 
 class PowerViewError(Exception):
@@ -99,6 +129,7 @@ class PowerViewClient:
         self._host = host.strip().removeprefix("http://").rstrip("/")
         self._timeout = timeout
         self._read_only = read_only
+        self._logged: set[str] = set()
 
     @property
     def host(self) -> str:
@@ -131,9 +162,16 @@ class PowerViewClient:
         if not text:
             return None
         try:
-            return cast(object, json.loads(text))
+            found = cast(object, json.loads(text))
         except ValueError as err:
             raise ResponseError(f"{method} {path}: not JSON: {text[:200]}") from err
+        self._log_format(_kind(method, path), found)
+        return found
+
+    def _log_format(self, kind: str, found: object) -> None:
+        if kind not in self._logged and _LOG.isEnabledFor(logging.DEBUG):
+            self._logged.add(kind)
+            _LOG.debug("Answer to %s: %s", kind, json.dumps(anonymized(found)))
 
     async def _get_object(self, path: str) -> dict[str, object]:
         found = await self._request("GET", path)
@@ -252,6 +290,8 @@ class PowerViewClient:
         try:
             async for line in response.content:
                 if (event := parse_event(line.decode("utf-8", "replace"))) is not None:
+                    self._log_format(f"event {event.kind}", json.loads(
+                        line.decode("utf-8", "replace").strip().removeprefix("data:")))
                     yield event
         except TimeoutError as err:
             raise StreamIdleError(f"shade events: silent too long: {err!r}") from err

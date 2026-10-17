@@ -78,4 +78,6 @@ gateway changed are reported as changed.
 
 Every log line and every error message names shades and gateways by id and name. Serial
 numbers and Bluetooth names identify a person's devices, so they are left out; addresses are
-kept, as they help find a fault.
+kept, as they help find a fault. With debug logging on, the first answer of each kind of request, and the first
+event of each kind, is logged whole, with serial numbers, Bluetooth names, MAC addresses, the
+home's key and its location hidden: what the gateway sends is then known from any log.

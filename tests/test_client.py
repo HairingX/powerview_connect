@@ -1,5 +1,6 @@
 """The client against the simulated gateway, which answers as a real Gen 3 gateway was measured to."""
 import asyncio
+import logging
 from collections.abc import AsyncIterator
 
 import aiohttp
@@ -14,7 +15,7 @@ from powerview_connect import (
     ReadOnlyError,
     ResponseError,
 )
-from powerview_connect._client import PowerViewClient, StreamIdleError
+from powerview_connect._client import PowerViewClient, StreamIdleError, anonymized
 from powerview_connect._model import EventKind, ShadeEvent
 from powerview_connect.testing import Request, SimulatedGateway
 
@@ -159,6 +160,35 @@ async def test_an_error_the_gateway_reports_for_a_shade_is_raised(
         await client.set_positions([154], primary=0.5)
     assert [str(failure) for failure in raised.value.failures] == ["shade 154 err=7"]
     assert raised.value.shade_ids == {154} and "SIM:" not in str(raised.value)
+
+
+async def test_with_debug_logging_one_answer_of_each_kind_is_logged_anonymized(
+    client: PowerViewClient, gateway: SimulatedGateway, caplog: pytest.LogCaptureFixture
+) -> None:
+    _furnish(gateway)
+    caplog.set_level(logging.DEBUG, logger="powerview_connect")
+    await client.get_shade(154)
+    await client.get_shade(271)
+    await client.get_home()
+    async with client.shade_events(idle_timeout=5) as events:
+        await gateway.wait_for_stream()
+        await client.set_positions([154], secondary=0.5)
+        await _next(events)
+        await _next(events)
+    lines = [record.getMessage() for record in caplog.records]
+    assert sum(line.startswith("Answer to GET /home/shades/{id}: ") for line in lines) == 1
+    assert any(line.startswith("Answer to GET /home: ") for line in lines)
+    assert any(line.startswith("Answer to PUT /home/shades/positions: ") for line in lines)
+    assert any(line.startswith("Answer to event motion-started: ") for line in lines)
+    assert '"bleName": "<hidden>"' in caplog.text and "SIM:" not in caplog.text
+    assert "0000000000000154" not in caplog.text
+
+
+def test_anonymized_keeps_the_shape_and_hides_what_identifies() -> None:
+    assert anonymized({"home": {"loc": {"latitude": 56.5, "longitude": 9.5}, "key": "ABC"},
+                       "gateways": [{"serial": "x", "mac": None, "aux": True, "ip": "192.0.2.1"}]}) == {
+        "home": {"loc": {"latitude": 0, "longitude": 0}, "key": "<hidden>"},
+        "gateways": [{"serial": "<hidden>", "mac": None, "aux": True, "ip": "192.0.2.1"}]}
 
 
 async def test_events_announce_a_move_and_its_end(
