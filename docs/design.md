@@ -47,7 +47,9 @@ them all, and nothing outlives it: a host that owns the task owns everything the
 - **Reads of moving shades.** One task, asleep while nothing moves. Every `poll_interval` it
   reads each moving shade, at most `max_concurrent_reads` at once; a shade that stopped, or left
   the home, while it waited for its turn is not read. A failed read still feeds the tracker, so
-  its timeouts end a move the shade can no longer be asked about.
+  its timeouts end a move the shade can no longer be asked about. With debug logging on, each
+  round also reads the home and every shade at once, and logs the moving shades' positions as
+  each read gives them, beside those read one shade at a time; these reads change nothing.
 - **A read of the whole home** every `refresh_interval`.
 - **Each gateway's own state** every `gateway_interval`, all at once. An auxiliary gateway is
   asked through a read-only client of the address the home lists for it, so nothing can reach

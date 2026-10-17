@@ -751,8 +751,11 @@ class PowerViewHub:
             await self._wake.wait()
             await self._clock.sleep(self._timing.poll_interval)
             moving = sorted(self._moving)
+            reads = [self._read_moving(shade_id) for shade_id in moving]
+            if moving and self._log.isEnabledFor(logging.DEBUG):
+                reads.append(self._compare_reads(moving))
             try:
-                await asyncio.gather(*(self._read_moving(shade_id) for shade_id in moving))
+                await asyncio.gather(*reads)
             except Exception:
                 self._log.exception("Reading the moving shades failed; it goes on")
             if not self._moving:
@@ -772,6 +775,7 @@ class PowerViewHub:
                 # The timeouts still end a move the shade can no longer be asked about.
                 moving = tracker.poll({}, self._clock.monotonic())
             else:
+                self._log.debug("Shade %s read alone: %s", shade_id, _rails(shade.positions))
                 moving = tracker.poll(shade.positions, self._clock.monotonic())
                 if shade_id in self._shades:
                     self._shades[shade_id] = dataclasses.replace(
@@ -781,6 +785,27 @@ class PowerViewHub:
             self._moving.discard(shade_id)
         if shade_id in self._trackers:
             self._update_shade(shade_id)
+
+    async def _compare_reads(self, moving: list[int]) -> None:
+        """Log the positions of the moving shades as a read of every shade at once gives them."""
+        for what, read in (("the home", self._home_shades), ("every shade", self._every_shade)):
+            async with self._reads:
+                try:
+                    shades = await self._request(
+                        f"Reading {what} while {len(moving)} shades move", read())
+                except PowerViewError as err:
+                    self._log.debug("Reading %s while shades move failed: %s", what, err)
+                    continue
+            found = {shade.id: shade for shade in shades}
+            self._log.debug("Shades read in %s: %s", what, "; ".join(
+                f"{shade_id} {_rails(found[shade_id].positions)}" if shade_id in found
+                else f"{shade_id} missing" for shade_id in moving))
+
+    async def _home_shades(self) -> list[Shade]:
+        return list((await self._client.get_home()).shades.values())
+
+    async def _every_shade(self) -> list[Shade]:
+        return await self._client.get_shades()
 
     async def __aenter__(self) -> Self:
         """Load the home and follow it in a task of the hub's own."""

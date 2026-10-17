@@ -23,6 +23,7 @@ from powerview_connect import (
     PowerViewHub,
     Rail,
     ReadOnlyError,
+    ResponseError,
     ShadeChanged,
     ShadeState,
     Timing,
@@ -795,6 +796,35 @@ async def test_a_hub_used_as_a_context_manager_follows_the_home_until_it_exits(
     assert hub.connection is Connection.STREAM_DOWN
     await until(lambda: gateway.streams == 0)
     await hub.close()
+
+
+async def test_with_debug_logging_a_moving_shade_is_also_read_with_every_other_one(
+    hub: PowerViewHub, gateway: SimulatedGateway, clock: ManualClock,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.DEBUG, logger="powerview_connect")
+    await hub.move(PATIO, {P: 0.9})
+    gateway.move(PATIO, {P: 0.5})
+    await _advance_until(clock, lambda: "Shades read in every shade" in caplog.text)
+    assert "Shade 271 read alone: primary=0.50" in caplog.text
+    assert "Shades read in the home: 271 primary=0.50" in caplog.text
+    assert "Shades read in every shade: 271 primary=0.50" in caplog.text
+    assert "Reading every shade while 1 shades move took" in caplog.text
+
+
+async def test_a_read_of_every_shade_that_fails_or_misses_a_moving_one_is_logged(
+    hub: PowerViewHub, gateway: SimulatedGateway, clock: ManualClock,
+    caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def refuse(_: PowerViewClient) -> list[object]:
+        raise ResponseError("GET /home/shades: HTTP 404")
+
+    monkeypatch.setattr(PowerViewClient, "get_shades", refuse)
+    caplog.set_level(logging.DEBUG, logger="powerview_connect")
+    await hub.move(PATIO, {P: 0.9})
+    gateway.remove_shade(PATIO)
+    await _advance_until(clock, lambda: "Reading every shade while shades move failed" in caplog.text)
+    assert "Shades read in the home: 271 missing" in caplog.text
 
 
 async def test_the_hub_logs_every_event_and_request_with_its_time(

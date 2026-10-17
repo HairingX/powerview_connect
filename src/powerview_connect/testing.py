@@ -191,6 +191,7 @@ class SimulatedGateway:
         self._app = web.Application()
         self._app.router.add_get("/home", self._home)
         self._app.router.add_get("/gateway", self._gateway)
+        self._app.router.add_get("/home/shades", self._all_shades)
         self._app.router.add_get("/home/shades/events", self._events)
         self._app.router.add_get("/home/shades/{id}", self._shade)
         self._app.router.add_put("/home/shades/positions", self._positions)
@@ -454,6 +455,10 @@ class SimulatedGateway:
     async def _gateway(self, request: web.Request) -> web.Response:
         await self._record(request)
         return web.json_response(self.gateway())
+
+    async def _all_shades(self, request: web.Request) -> web.Response:
+        await self._record(request)
+        return web.json_response([shade.document() for shade in self.shades.values()])
 
     async def _shade(self, request: web.Request) -> web.Response:
         await self._record(request)

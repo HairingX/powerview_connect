@@ -157,6 +157,18 @@ class PowerViewClient:
         """What the gateway reports of itself: its hardware, firmware and network."""
         return parse_gateway(await self._get_object("/gateway"))
 
+    async def get_shades(self) -> list[Shade]:
+        """Every shade, with its positions as the gateway gives them for all shades at once.
+
+        Raises:
+            ResponseError: the gateway answered with something other than a list.
+        """
+        found = await self._request("GET", "/home/shades")
+        if not isinstance(found, list):
+            raise ResponseError(f"GET /home/shades: not a list: {str(found)[:200]}")
+        return [parse_shade(cast(dict[str, object], raw))
+                for raw in cast(list[object], found) if isinstance(raw, dict)]
+
     async def get_shade(self, shade_id: int) -> Shade:
         """One shade, with its positions as they are now, also while it moves."""
         return parse_shade(await self._get_object(f"/home/shades/{shade_id}"))

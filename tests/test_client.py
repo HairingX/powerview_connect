@@ -75,6 +75,15 @@ async def test_a_shade_reports_its_positions_as_they_change_during_a_move(
     assert (await client.get_shade(154)).positions == {P: 0.25, S: 0.71, T: 0.0}
 
 
+async def test_every_shade_can_be_read_at_once(
+    client: PowerViewClient, gateway: SimulatedGateway
+) -> None:
+    _furnish(gateway)
+    gateway.move(154, {P: 0.1})
+    shades = {shade.id: shade for shade in await client.get_shades()}
+    assert set(shades) == set(gateway.shades) and shades[154].positions[P] == 0.1
+
+
 async def test_motion_stopped_without_a_move_reports_where_the_shade_is(
     client: PowerViewClient, gateway: SimulatedGateway
 ) -> None:
@@ -344,8 +353,12 @@ async def odd_gateway() -> AsyncIterator[str]:
     async def array(_: web.Request) -> web.Response:
         return web.json_response([1])
 
+    async def mapping(_: web.Request) -> web.Response:
+        return web.json_response({"shades": []})
+
     app = web.Application()
     app.router.add_get("/home", empty)
+    app.router.add_get("/home/shades", mapping)
     app.router.add_get("/home/shades/1", text)
     app.router.add_get("/home/shades/2", array)
     app.router.add_get("/home/shades/events", array)
@@ -367,6 +380,8 @@ async def test_answers_that_are_not_the_documents_asked_for_are_errors(
         await client.get_shade(1)
     with pytest.raises(ResponseError, match="not an object"):
         await client.get_shade(2)
+    with pytest.raises(ResponseError, match="not a list"):
+        await client.get_shades()
 
 
 async def test_a_stream_the_gateway_refuses_is_an_error(
