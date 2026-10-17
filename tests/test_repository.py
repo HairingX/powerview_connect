@@ -52,3 +52,4 @@ def test_no_real_ip_mac_or_email_address_is_tracked(name: str, text: str) -> Non
             if not mac.lower().startswith(DOCUMENTATION_MAC)]
     emails = set(re.findall(r"[\w.+-]+@[A-Za-z][\w-]*(?:\.[\w-]+)*\.[A-Za-z]{2,}\b", text)) - ALLOWED_EMAILS
     assert (addresses, macs, emails) == ([], [], set()), name
+

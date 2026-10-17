@@ -48,6 +48,9 @@ obvious from the name - one or two lines, no narrative.
   gateway are the fixtures of the parsing and motion tests. Every capture is kept whole,
   anonymized as `captures/README.md` says, in `captures/`. A change to what the gateway is
   known to do changes `docs/protocol.md`, the simulated gateway and the captures together.
+- Measurements are the only source: what has not been measured is marked as not verified, in
+  `docs/protocol.md` and where the code relies on it. No other project's code or documentation
+  is copied into the repository.
 - Live tests (`tests/test_live_*.py`) only read - `GET /home` and the event stream, with a
   read-only client - never move a shade, and skip themselves unless a gateway is configured.
   CI runs `pytest -m "not live"`.
