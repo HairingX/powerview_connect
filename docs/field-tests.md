@@ -124,7 +124,7 @@ Home Assistant. Put the power back, and wait five minutes.
 
 **Record:** the log; any error; whether the shade went unavailable in Home Assistant, and when.
 
-**Unknown:** whether the gateway sends `shade-offline` and `shade-online`, which are said to exist
+**Unknown:** whether the gateway sends `shade-offline` and `shade-online`, which the API description has
 but no gateway has been seen to send; what a command to an unreachable shade answers.
 
 ## 6. The home loses the internet

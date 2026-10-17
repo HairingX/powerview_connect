@@ -53,3 +53,12 @@ def test_no_real_ip_mac_or_email_address_is_tracked(name: str, text: str) -> Non
     emails = set(re.findall(r"[\w.+-]+@[A-Za-z][\w-]*(?:\.[\w-]+)*\.[A-Za-z]{2,}\b", text)) - ALLOWED_EMAILS
     assert (addresses, macs, emails) == ([], [], set()), name
 
+
+
+def test_every_endpoint_the_client_uses_is_described_in_the_api_notes() -> None:
+    client = (ROOT / "src" / "powerview_connect" / "_client.py").read_text(encoding="utf-8")
+    api = (ROOT / "docs" / "api.md").read_text(encoding="utf-8")
+    paths = {re.sub(r"\{\w+\}", "{id}", path.split("?")[0])
+             for path in re.findall(r'f?"(/(?:home|gateway)[^"]*)"', client)}
+    assert "/home/shades/{id}" in paths
+    assert [path for path in sorted(paths) if f"`GET {path}" not in api and f"`PUT {path}" not in api] == []

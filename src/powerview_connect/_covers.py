@@ -107,7 +107,8 @@ def _check(openness: float) -> None:
 def covers(shade: Shade) -> tuple[CoverSpec, ...]:
     """The covers of `shade`, by its capabilities.
 
-    Only bottom-up and top-down/bottom-up shades have been measured; the others are not verified.
+    Only bottom-up and top-down/bottom-up shades have been measured; the others follow the API
+    description.
     """
     capability = shade.capability
     match capability:
