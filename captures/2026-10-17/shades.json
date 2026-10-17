@@ -1,0 +1,135 @@
+[
+  {
+    "id": 150,
+    "type": 8,
+    "capabilities": 7,
+    "batteryStatus": 3,
+    "gateway": "Main Room Gateway"
+  },
+  {
+    "id": 154,
+    "type": 8,
+    "capabilities": 7,
+    "batteryStatus": 3,
+    "gateway": "Main Room Gateway"
+  },
+  {
+    "id": 163,
+    "type": 8,
+    "capabilities": 7,
+    "batteryStatus": 3,
+    "gateway": "Bedroom Gateway"
+  },
+  {
+    "id": 218,
+    "type": 8,
+    "capabilities": 7,
+    "batteryStatus": 3,
+    "gateway": "Main Room Gateway"
+  },
+  {
+    "id": 223,
+    "type": 8,
+    "capabilities": 7,
+    "batteryStatus": 3,
+    "gateway": "Main Room Gateway"
+  },
+  {
+    "id": 227,
+    "type": 8,
+    "capabilities": 7,
+    "batteryStatus": 3,
+    "gateway": "Main Room Gateway"
+  },
+  {
+    "id": 231,
+    "type": 6,
+    "capabilities": 0,
+    "batteryStatus": 1,
+    "gateway": "Bedroom Gateway"
+  },
+  {
+    "id": 248,
+    "type": 6,
+    "capabilities": 0,
+    "batteryStatus": 1,
+    "gateway": "Hall Gateway"
+  },
+  {
+    "id": 253,
+    "type": 6,
+    "capabilities": 0,
+    "batteryStatus": 1,
+    "gateway": "Hall Gateway"
+  },
+  {
+    "id": 256,
+    "type": 6,
+    "capabilities": 0,
+    "batteryStatus": 1,
+    "gateway": "Hall Gateway"
+  },
+  {
+    "id": 259,
+    "type": 6,
+    "capabilities": 0,
+    "batteryStatus": 1,
+    "gateway": "Hall Gateway"
+  },
+  {
+    "id": 262,
+    "type": 6,
+    "capabilities": 0,
+    "batteryStatus": 1,
+    "gateway": "Hall Gateway"
+  },
+  {
+    "id": 265,
+    "type": 6,
+    "capabilities": 0,
+    "batteryStatus": 1,
+    "gateway": "Hall Gateway"
+  },
+  {
+    "id": 268,
+    "type": 6,
+    "capabilities": 0,
+    "batteryStatus": 1,
+    "gateway": "Room 4 Gateway"
+  },
+  {
+    "id": 271,
+    "type": 6,
+    "capabilities": 0,
+    "batteryStatus": 1,
+    "gateway": "Main Room Gateway"
+  },
+  {
+    "id": 274,
+    "type": 6,
+    "capabilities": 0,
+    "batteryStatus": 1,
+    "gateway": "Bedroom Gateway"
+  },
+  {
+    "id": 277,
+    "type": 6,
+    "capabilities": 0,
+    "batteryStatus": 1,
+    "gateway": "Bedroom Gateway"
+  },
+  {
+    "id": 280,
+    "type": 6,
+    "capabilities": 0,
+    "batteryStatus": 1,
+    "gateway": "Room 4 Gateway"
+  },
+  {
+    "id": 283,
+    "type": 6,
+    "capabilities": 0,
+    "batteryStatus": 1,
+    "gateway": "Room 4 Gateway"
+  }
+]

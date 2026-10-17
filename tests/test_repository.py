@@ -9,8 +9,12 @@ import pytest
 ROOT = Path(__file__).parents[1]
 
 ALLOWED_NETWORKS = [ipaddress.ip_network(net) for net in (
-    "127.0.0.0/8", "0.0.0.0/32", "192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24")]
-"""Loopback, and the ranges RFC 5737 sets aside for documentation."""
+    "127.0.0.0/8", "0.0.0.0/32", "192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24",
+    "255.255.0.0/16")]
+"""Loopback, the ranges RFC 5737 sets aside for documentation, and netmasks."""
+
+DOCUMENTATION_MAC = "00:00:5e:00:53:"
+"""The range RFC 7042 sets aside for documentation."""
 
 ALLOWED_EMAILS = {"41898282+github-actions[bot]@users.noreply.github.com"}
 
@@ -35,7 +39,7 @@ def test_the_tracked_files_are_found() -> None:
 
 
 @pytest.mark.parametrize(("name", "text"), _texts(), ids=lambda value: str(value)[:60])
-def test_no_real_ip_address_or_email_address_is_tracked(name: str, text: str) -> None:
+def test_no_real_ip_mac_or_email_address_is_tracked(name: str, text: str) -> None:
     addresses: list[str] = []
     for match in re.finditer(r"(?<![\w.])(\d{1,3}(?:\.\d{1,3}){3})(?![\w.])", text):
         try:
@@ -44,5 +48,17 @@ def test_no_real_ip_address_or_email_address_is_tracked(name: str, text: str) ->
             continue
         if not any(address in network for network in ALLOWED_NETWORKS):
             addresses.append(str(address))
+    macs = [mac for mac in re.findall(r"(?<![\w:])(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}(?![\w:])", text)
+            if not mac.lower().startswith(DOCUMENTATION_MAC)]
     emails = set(re.findall(r"[\w.+-]+@[A-Za-z][\w-]*(?:\.[\w-]+)*\.[A-Za-z]{2,}\b", text)) - ALLOWED_EMAILS
-    assert (addresses, emails) == ([], set()), name
+    assert (addresses, macs, emails) == ([], [], set()), name
+
+
+
+def test_every_endpoint_the_client_uses_is_described_in_the_api_notes() -> None:
+    client = (ROOT / "src" / "powerview_connect" / "_client.py").read_text(encoding="utf-8")
+    api = (ROOT / "docs" / "api.md").read_text(encoding="utf-8")
+    paths = {re.sub(r"\{\w+\}", "{id}", path.split("?")[0])
+             for path in re.findall(r'f?"(/(?:home|gateway)[^"]*)"', client)}
+    assert "/home/shades/{id}" in paths
+    assert [path for path in sorted(paths) if f"`GET {path}" not in api and f"`PUT {path}" not in api] == []
