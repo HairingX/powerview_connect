@@ -4,7 +4,7 @@ It is an HTTP server on 127.0.0.1 that answers as a real Gen 3 gateway was measu
 changes only the rails it names, a top-down/bottom-up shade's rails stop where they meet short
 of the target announced, every move is announced on the event stream by a battery alert and a
 motion-started event, and a shade's positions change only when the test moves it. The test decides when a move progresses
-and ends, when streams drop and when the gateway goes offline.
+and where it ends, when streams drop and when the gateway goes offline.
 """
 from __future__ import annotations
 
@@ -390,12 +390,18 @@ class SimulatedGateway:
         """Move a shade part of the way; the gateway sends no event for it."""
         self.shades[shade_id].positions.update(positions)
 
-    def finish(self, shade_id: int) -> None:
-        """End a shade's move at its target, and send motion-stopped."""
+    def finish(self, shade_id: int, at: Mapping[Rail, float] | None = None) -> None:
+        """End a shade's move, and send motion-stopped.
+
+        Args:
+            at: where the move ends, short of its target as when fabric gathers; None ends it
+                at its target.
+        """
         shade = self.shades[shade_id]
         if shade.target is not None:
             shade.positions.update(shade.target)
             shade.target = None
+        shade.positions.update(at or {})
         self.emit(EventKind.MOTION_STOPPED, shade_id)
 
     def set_online(self, shade_id: int, online: bool) -> None:

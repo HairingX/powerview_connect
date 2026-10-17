@@ -32,6 +32,9 @@ class ShadeTracker:
         """Each rail's position, None until known."""
         self.target: dict[Rail, float | None] = dict.fromkeys(RAILS)
         """Each rail's target while moving, None where it is not known."""
+        self.last_target: dict[Rail, float] = {}
+        """The targets of the last move once it has ended, until the next one begins; emptied by
+        a stop, as a stopped move did not aim where it ended."""
         self.moving = False
         self.eta: float | None = None
         """The gateway's estimate of the current move's time in seconds."""
@@ -60,12 +63,16 @@ class ShadeTracker:
     def _begin(self, now: float) -> None:
         self.moving = True
         self.target = dict.fromkeys(RAILS)
+        self.last_target = {}
         self._started_at = now
         self._last_change_at = now
         self._changed_since_start = False
         self._last_delta = {}
 
     def _finish(self) -> None:
+        if self.moving:
+            self.last_target = {rail: value for rail, value in self.target.items()
+                                if value is not None}
         self.moving = False
         self.target = dict.fromkeys(RAILS)
         self.eta = None
@@ -123,6 +130,7 @@ class ShadeTracker:
 
     def stop_requested(self, now: float) -> None:
         """Note a stop sent to the shade: the move ends once the shade is still."""
+        self.last_target = {}
         if self.moving:
             self.target = dict.fromkeys(RAILS)
             self._last_change_at = now

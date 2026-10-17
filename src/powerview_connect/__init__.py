@@ -19,6 +19,7 @@ from ._hub import (
     HomeDiff,
     PowerViewHub,
     ShadeChanged,
+    ShadeStalled,
     ShadeState,
     Timing,
 )
@@ -33,6 +34,7 @@ from ._model import (
     Scene,
     Shade,
 )
+from ._recovery import StallOutcome, StallRecovery
 
 __version__ = _installed_version("powerview_connect")
 __all__ = [
@@ -62,6 +64,9 @@ __all__ = [
     "Scene",
     "Shade",
     "ShadeChanged",
+    "ShadeStalled",
     "ShadeState",
+    "StallOutcome",
+    "StallRecovery",
     "Timing",
 ]

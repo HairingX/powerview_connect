@@ -6,11 +6,13 @@ What the library does with what `protocol.md` says a real gateway does.
 
 The package's `__all__` is its whole public API, and the README documents nothing else:
 
-- **The hub:** `PowerViewHub`, its `Timing`, and the `Clock` it may be given.
+- **The hub:** `PowerViewHub`, its `Timing`, the `Clock` it may be given, and the
+  `StallRecovery` it may be given, with its `StallOutcome`.
 - **What it knows:** `ShadeState`, `GatewayState` and `Connection`; the home as the gateway
   describes it: `Home`, `Shade`, `Scene`, `Gateway`, `GatewayStatus`, `Rail`, `Capabilities`,
   `BatteryStatus`; and the covers: `CoverSpec`, `CoverRole`.
 - **Changes:** `Change`, `ShadeChanged`, `GatewayChanged`, `ConnectionChanged`, `HomeChanged`,
+  `ShadeStalled`,
   `HomeDiff`.
 - **Errors:** `PowerViewError` and its kinds, and `CommandFailure`.
 - **`powerview_connect.testing`:** the simulated gateway and the manual clock.
@@ -27,6 +29,7 @@ what it lacks.
 | `_model.py` | the gateway's documents as dataclasses, and the parsers | no | no |
 | `_covers.py` | which covers a shade is controlled as, by its capabilities | no | no |
 | `_motion.py` | the tracker: whether one shade still moves | no | given the time |
+| `_recovery.py` | whether a cover stopped short of fully open, and the steps that raise it | no | no |
 | `_client.py` | one request at a time, and the event stream | yes | no |
 | `_clock.py` | the `Clock` protocol, and the event loop's own clock | no | yes |
 | `_hub.py` | `PowerViewHub`: a whole home, kept current while it runs | through the client | through its `Clock` |
@@ -52,6 +55,35 @@ them all, and nothing outlives it: a host that owns the task owns everything the
 - **Each gateway's own state** every `gateway_interval`, all at once. An auxiliary gateway is
   asked through a read-only client of the address the home lists for it, so nothing can reach
   a shade through it; a new address gets a new client.
+
+## Covers that stop short
+
+A fabric gathering at the top can stop a curtain sent fully open a little short; smaller steps
+let it fold. As the event stream says where every move aims and where it stopped, whoever
+started it, the hub can tell such a stop and raise the cover the rest of the way.
+
+- **Only on a `motion-stopped` event.** The tracker can end a move itself while the motor still
+  runs, when nothing changed for `stall` seconds, and leave a stale position: that must not look
+  like a stall. It keeps the last move's targets once the move ends, until the next one begins,
+  and forgets them on a stop sent, as a stopped move did not aim where it ended.
+- **Only covers that open upwards:** `SHADE` and `BOTTOM`. The `TOP` rail opens downwards and
+  the shade's firmware stops it where it meets the bottom rail; a `BOTTOM` rail likewise stops
+  at a lowered top rail, so it counts only while the top rail is at the top. Front, rear and
+  vanes have not been measured.
+- **A band.** The target must be fully open, and the stop from `min_openness` to just short of
+  open: lower down, a stop is taken as meant, as from the app's stop button.
+- **One recovery per stall, one per shade.** It is a task in `run`'s TaskGroup, so it ends with
+  `run`; an exception in it is logged and ends it as `GAVE_UP`, never the TaskGroup. Each step
+  is a move of the cover's rail alone, sent as `move` sends it but not taken as the caller's
+  command; its target is set before it is sent, as its `motion-started` can come before the
+  answer. The step's own stops are not looked at for a stall, and the move's targets are
+  forgotten once the recovery ends, so each stall is raised once.
+- **Interruptions.** A command of the caller, a `motion-started` aiming the rail anywhere but the
+  step sent, the shade going offline or leaving the home ends it as `INTERRUPTED`. A
+  `motion-started` without a target for the rail cannot be told from the step's own, so it does
+  not.
+- **Time** is the hub's `Clock`: the wait for each step's stop, up to `Timing.min_timeout`, and
+  the pause after it.
 
 ## Connection
 

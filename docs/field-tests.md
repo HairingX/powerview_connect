@@ -83,3 +83,16 @@ minutes. Open `http://<gateway-address>/gateway` in a browser on the phone. Reco
 sensors went off and came back on.
 
 **Unknown:** what `internetState` says without the internet.
+
+## 7. A curtain that stops short of fully open
+
+**Do:** with stall recovery off, open a curtain that is known to stop a little short of fully
+open, from the PowerView app. Wait until it has stopped, then one minute more. Then turn stall
+recovery on in Home Assistant, and open it again from the app, from its closed position.
+
+**Record:** the log; where the curtain stopped each time, as it looks; whether it was raised the
+rest of the way in steps the second time, and whether it then looked fully open.
+
+**Unknown:** whether a curtain that looks stuck has `motion-stopped` `currentPositions` below
+the `motion-started` target, as stall recovery expects, or reports the target although it
+stopped short; how far short it stops; and whether steps of a third of what is left raise it.
