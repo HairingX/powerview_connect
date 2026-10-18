@@ -139,13 +139,28 @@ sensors went off and came back on.
 
 ## 7. A curtain that stops short of fully open
 
-**Do:** with the retry of stalled openings off, open a curtain that is known to stop a little short of fully
-open, from the PowerView app. Wait until it has stopped, then one minute more. Then turn the
-retry on for it in Home Assistant, and open it again from the app, from its closed position.
+**Do:** turn the retry of stalled openings on for the curtains known to stop short of fully open,
+with debug logging on. Open them, from Home Assistant and from the PowerView app, and wait until
+every one has stopped, then one minute more.
 
-**Record:** the log; where the curtain stopped each time, as it looks; whether it was opened the
-rest of the way in steps the second time, and whether it then looked fully open.
+**Record:** the log; where each curtain stopped, as it looks; whether a stalled one was lowered and
+opened again, and whether it then looked fully open and stayed so.
 
-**Unknown:** whether a curtain that looks stuck has `motion-stopped` `currentPositions` below
-the `motion-started` target, as the retry expects, or reports the target although it
-stopped short; how far short it stops; and whether steps of a third of what is left raise it.
+**Unknown:** whether lowering by 0.1 is always enough for a motor that stalled to open again;
+whether a motor backs off by itself after a stall or because of the next command; and whether a
+curtain opened so slides down from the top as one opened from where it stalled does.
+
+**Result (2026-10-18, library 1.3.0, which raised a stalled curtain in three small steps):** two
+Duette curtains of type 6, 262 and 280; the captures of 2026-10-18 hold the log.
+
+- A stall ends with the move's own `motion-stopped` short of the target, as the retry expects:
+  280 opened from 0.9 stopped at 0.91. Opened from 0.95 (262) and from 0.86 (280), the move
+  started and stopped within 4 ms.
+- The step after a stall did not raise the curtain: its motor backed off downwards by 0.05,
+  with no `motion-started`, and the retry gave up. An opening sent 3-6 s later opened it fully;
+  one sent 158 s later stalled again.
+- Both curtains that reached the top slid down by themselves to 0.95 within 4-6 s. 280's was
+  taken for a stall; 262's came during the retry, which did not look at it. Steps of 0.01-0.02
+  from there stayed where they stopped.
+- So a retry lowers a stalled curtain and opens it at once, and a curtain sliding down from the
+  top is not retried: test 7 is to be made again with that.

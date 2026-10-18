@@ -9,6 +9,7 @@ import pytest
 
 from powerview_connect import Rail
 from powerview_connect._model import command_errors, parse_event, parse_gateway, parse_home, parse_shade
+from powerview_connect._motion import ShadeTracker
 
 CAPTURES = Path(__file__).parents[1] / "captures"
 PLACEHOLDERS = {
@@ -94,3 +95,47 @@ def test_every_capture_is_described() -> None:
     readme = (CAPTURES / "README.md").read_text(encoding="utf-8")
     for path in _files():
         assert f"`{path.relative_to(CAPTURES).as_posix()}`" in readme, path
+
+
+def _replay_stalls() -> tuple[list[tuple[int, float]], list[tuple[int, float]]]:
+    """The stalls of 2026-10-18 replayed through the tracker, with the commands sent: each
+    motion-stopped that ends a move aimed fully open short of the top, and each that ends no move,
+    by its shade and where it stopped."""
+    events = cast(list[dict[str, object]], json.loads(
+        (CAPTURES / "2026-10-18/stall-events.json").read_text(encoding="utf-8")))
+    moves = cast(list[dict[str, object]], json.loads(
+        (CAPTURES / "2026-10-18/stall-moves.json").read_text(encoding="utf-8")))
+    timeline = sorted(
+        [(cast(float, event["seconds"]), 1, event) for event in events]
+        + [(cast(float, move["seconds"]), 0, move) for move in moves],
+        key=lambda item: (item[0], item[1]))
+    trackers: dict[int, ShadeTracker] = {}
+    stalls: list[tuple[int, float]] = []
+    slides: list[tuple[int, float]] = []
+    for seconds, is_event, item in timeline:
+        shade_id = cast(int, item["id"])
+        tracker = trackers.setdefault(shade_id, ShadeTracker())
+        if not is_event:
+            tracker.command(seconds, {Rail.PRIMARY: cast(float, item["primary"])})
+            continue
+        event = parse_event("data: " + json.dumps(item))
+        assert event is not None
+        if event.kind == "motion-started":
+            tracker.motion_started(event, seconds)
+        elif event.kind == "shade-online":
+            tracker.snapshot(event.current)
+        elif event.kind == "motion-stopped":
+            before = dict(tracker.last_target)
+            tracker.motion_stopped(event)
+            at = event.current[Rail.PRIMARY]
+            if before and not tracker.last_target:
+                slides.append((shade_id, at))
+            elif tracker.last_target.get(Rail.PRIMARY) == 1.0 and at < 0.995:
+                stalls.append((shade_id, at))
+    return stalls, slides
+
+
+def test_the_curtains_that_slid_down_from_the_top_end_no_move_and_their_stalls_still_count() -> None:
+    stalls, slides = _replay_stalls()
+    assert slides == [(262, 0.95), (280, 0.95)]
+    assert stalls == [(262, 0.95), (280, 0.91), (280, 0.86)]

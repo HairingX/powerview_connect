@@ -37,7 +37,7 @@ what it lacks.
 | `_model.py` | the gateway's documents as dataclasses, and the parsers | no | no |
 | `_covers.py` | which covers a shade is controlled as, by its capabilities | no | no |
 | `_motion.py` | the tracker: whether one shade still moves | no | given the time |
-| `_retry.py` | whether a cover's opening stalled, and the steps that retry it | no | no |
+| `_retry.py` | whether a cover's opening stalled, and how its retry goes | no | no |
 | `_client.py` | one request at a time, and the event stream | yes | no |
 | `_clock.py` | the `Clock` protocol, and the event loop's own clock | no | yes |
 | `_hub.py` | `PowerViewHub`: a whole home, kept current while it runs | through the client | through its `Clock` |
@@ -67,19 +67,27 @@ them all, and nothing outlives it: a host that owns the task owns everything the
 ## Retrying an opening that stalls
 
 The fabric of a pleated or cellular shade gathers as it opens, and can stop a shade sent fully
-open a little short; small steps, with time between them for the fabric to settle, take it the
-rest of the way. As the event stream says where every move aims and where it stopped, whoever
-started it, the hub can tell such a stop and retry it.
+open short of the top. A motor that stalled was measured to refuse an opening sent from where it
+stopped, and to back off downwards on the next command instead; sent fully open from a little
+lower down, soon after, it opened fully. As the event stream says where every move aims and where
+it stopped, whoever started it, the hub can tell such a stop and retry it so.
 
 - **Opt-in, per cover.** It does something only for a cover it is turned on for, with that cover's
   own `StalledOpenRetry`, as only the user knows which shade stalls and how. A cover is named by its
   shade's id and its `role`, which stays the same when the shade is read again, as a shade may come
   to have more than one cover that can be retried. Turning it off for a cover interrupts a retry of
   it. Which covers are on is not kept: a host that persists settings keeps it.
-- **Only on a `motion-stopped` event.** The tracker can end a move itself while the motor still
-  runs, when nothing changed for `stall` seconds, and leave a stale position: that must not look
-  like a stall. It keeps the last move's targets once the move ends, until the next one begins,
-  and forgets them on a stop sent, as a stopped move did not aim where it ended.
+- **Only on the `motion-stopped` that ends a move.** The tracker can end a move itself while the
+  motor still runs, when nothing changed for `stall` seconds, and leave a stale position: that
+  must not look like a stall, so the first `motion-stopped` after a move began still ends it. It
+  keeps the last move's targets once the move ends, until the next one begins, and forgets them
+  on a stop sent, as a stopped move did not aim where it ended, and on any later
+  `motion-stopped`: a shade that reached the top was measured to slide down by itself a few
+  seconds later, reporting where it is in `shade-online` events and ending with a
+  `motion-stopped`, and opening it again would not keep it there. A move whose own
+  `motion-stopped` was lost, as when the stream is reopened, takes the next one as its own: a
+  shade then sliding down is retried once for nothing, which costs less than missing a late
+  stop of a real stall.
 - **Only covers that open upwards, of a shade whose fabric gathers** (`CoverSpec.retryable`). The
   movement comes from the capabilities: `SHADE` and `BOTTOM`. The `TOP` rail opens downwards and
   the shade's firmware stops it where it meets the bottom rail; a `BOTTOM` rail likewise stops
@@ -91,19 +99,26 @@ started it, the hub can tell such a stop and retry it.
   open: lower down, a stop is taken as meant, as from the app's stop button. Nearer the top, a
   stop from the app cannot be told from a stall; a shade often stopped there by hand is left
   with the retry off.
-- **One retry per stall, one per shade**, as a step is a move of the shade. It is a task in `run`'s
-  TaskGroup, so it ends with `run`; an exception in it is logged and ends it as `GAVE_UP`, never the
-  TaskGroup. Each step is a move of the cover's rail alone, sent as `move` sends it but not taken as
-  the caller's command; its target is set before it is sent, as its `motion-started` can come before
-  the answer. The step's own stops are not looked at for a stall, and the move's targets are
-  forgotten once the retry ends, so each stall is retried once.
+- **Lower, then open soon.** Each attempt lowers the cover by `lower_by` and, once the shade has
+  sent no event for `Timing.retry_settle`, sends it fully open: openings sent 3-6 s after a motor
+  backed off opened fully, one sent long after stalled again, and one sent while the motor still
+  backs off would be lost in it. A motor that backs off sends no `motion-started`, so each move
+  waits for the shade's next `motion-stopped` alone. Where the opening reached is taken from that
+  `motion-stopped` itself, as a `shade-online` of the shade sliding back down can come in the same
+  instant. An attempt that leaves the cover short of the top is followed by the next, from where it
+  stopped, up to `attempts`.
+- **One retry per stall, one per shade**, as each move is a move of the shade. It is a task in
+  `run`'s TaskGroup, so it ends with `run`; an exception in it is logged and ends it as `GAVE_UP`,
+  never the TaskGroup. Each move is of the cover's rail alone, sent as `move` sends it but not
+  taken as the caller's command; its target is set before it is sent, as its `motion-started` can
+  come before the answer. The retry's own stops are not looked at for a stall, and the move's
+  targets are forgotten once the retry ends, so each stall is retried once.
 - **Interruptions.** A command of the caller, a `motion-started` aiming the rail anywhere but the
-  step sent, the shade going offline or leaving the home, or the retry turned off ends it as
-  `INTERRUPTED`. A `motion-started` without a target for the rail cannot be told from the step's
-  own, so it does not.
-- **Time** is the hub's `Clock`: the wait for each step's stop, up to `Timing.retry_step_timeout`
-  and apart from the tracker's own limits, and the `delay` after it, 90 s by default, as gathered
-  fabric takes about a minute or more to settle.
+  move sent, the shade going offline or leaving the home, or the retry turned off ends it as
+  `INTERRUPTED`. A `motion-started` without a target for the rail cannot be told from the
+  retry's own, so it does not.
+- **Time** is the hub's `Clock`: the wait for each move's stop, up to `Timing.retry_move_timeout`
+  and apart from the tracker's own limits.
 
 ## Connection
 

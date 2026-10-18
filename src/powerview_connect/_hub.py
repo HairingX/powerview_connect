@@ -32,7 +32,7 @@ from ._model import (
     ShadeEvent,
 )
 from ._motion import STEP, ShadeTracker
-from ._retry import RetryOutcome, StalledOpenRetry, retry_steps, stalled_openness
+from ._retry import RetryOutcome, StalledOpenRetry, stalled_openness
 
 type Listener[T] = Callable[[T], None]
 type Unsubscribe = Callable[[], None]
@@ -70,22 +70,26 @@ class Timing:
     min_timeout: float = 90.0
     """The shortest time after which a move ends anyway, however short the gateway's estimate
     of it."""
-    retry_step_timeout: float = 90.0
-    """Longest a step of a retried opening may take to stop."""
+    retry_move_timeout: float = 90.0
+    """Longest a move of a retried opening may take to stop."""
+    retry_settle: float = 3.0
+    """How long a lowered shade must have sent no event before it is opened again: openings sent
+    3-6 s after a motor that stalled had backed off opened fully."""
 
     def __post_init__(self) -> None:
         """Refuse values the hub cannot work with.
 
         Raises:
-            ValueError: an interval or a limit of a move is not positive, `settle` is negative, no
+            ValueError: an interval or a limit of a move is not positive, `settle` or
+                `retry_settle` is negative, no
                 wait is given before reopening the stream, or fewer than one read or
                 confirmation is allowed.
         """
         intervals = (self.poll_interval, self.refresh_interval, self.gateway_interval,
-                     self.request_timeout, self.stream_idle_timeout, self.retry_step_timeout,
+                     self.request_timeout, self.stream_idle_timeout, self.retry_move_timeout,
                      self.stall, self.start_grace, self.min_timeout)
-        if any(interval <= 0 for interval in intervals) or self.settle < 0:
-            raise ValueError(f"intervals and timeouts must be positive, settle 0 or more: {self}")
+        if any(interval <= 0 for interval in intervals) or min(self.settle, self.retry_settle) < 0:
+            raise ValueError(f"intervals and timeouts must be positive, settles 0 or more: {self}")
         if not self.reconnect_backoff or any(wait < 0 for wait in self.reconnect_backoff):
             raise ValueError(f"reconnect_backoff needs waits of 0 or more: {self}")
         if self.max_concurrent_reads < 1 or self.removal_confirmations < 1:
@@ -222,10 +226,14 @@ class _Interrupted(Exception):
 class _ActiveRetry:
     cover: CoverSpec
     expected: float | None = None
-    """The openness of the step sent, while its move is awaited."""
+    """The openness of the move sent, while it is awaited."""
+    stopped_at: float | None = None
+    """How far open the cover was at the shade's last motion-stopped."""
+    heard_at: float = 0.0
+    """When the shade last sent an event, on the hub's clock."""
     interrupted: bool = False
     wake: asyncio.Event = field(default_factory=asyncio.Event)
-    """Set by the step's motion-stopped, and by an interruption."""
+    """Set by any motion-stopped of the shade, and by an interruption."""
 
 
 def _metadata(shade: Shade) -> Shade:
@@ -822,13 +830,15 @@ class PowerViewHub:
         if tracker is None:
             return
         active = self._active.get(event.shade_id)
+        if active is not None:
+            active.heard_at = self._clock.monotonic()
         match event.kind:
             case EventKind.MOTION_STARTED:
                 tracker.motion_started(event, self._clock.monotonic())
                 self._poll(event.shade_id)
                 if active is not None:
                     aimed = active.cover.openness(event.target)
-                    # A move without a target for the rail cannot be told from the step's own.
+                    # A move without a target for the rail cannot be told from the retry's own.
                     if aimed is not None and (active.expected is None
                                               or abs(aimed - active.expected) > STEP):
                         self._interrupt(event.shade_id)
@@ -837,6 +847,9 @@ class PowerViewHub:
                 self._moving.discard(event.shade_id)
             case EventKind.SHADE_ONLINE:
                 self._offline.discard(event.shade_id)
+                # A shade sliding down by itself reports where it is in these, and in no
+                # motion-started.
+                tracker.snapshot(event.current)
             case EventKind.SHADE_OFFLINE:
                 self._offline.add(event.shade_id)
                 self._interrupt(event.shade_id)
@@ -847,7 +860,9 @@ class PowerViewHub:
         if event.kind == EventKind.MOTION_STOPPED:
             if active is None:
                 self._detect_stall(event.shade_id)
-            elif active.expected is not None:
+            else:
+                # Taken now: a shade-online sliding the cover down can come in the same instant.
+                active.stopped_at = self._cover_openness(event.shade_id, active.cover)
                 active.wake.set()
 
     # ----------------------------------------------------------------- stalls
@@ -865,11 +880,12 @@ class PowerViewHub:
             openness = stalled_openness(cover, tracker.last_target, final, settings)
             if openness is None:
                 continue
-            # One retry per stalled move: its own steps' stops are not looked at again.
+            # One retry per stalled move: its own moves' stops are not looked at again.
             tracker.last_target = {}
             self._active[shade_id] = active = _ActiveRetry(cover)
-            self._log.info("Shade %s (%s) stalled at %.2f of fully open; retrying its %s cover "
-                           "in steps", shade_id, self._shades[shade_id].name, openness, cover.role)
+            self._log.info("Shade %s (%s) stalled at %.2f of fully open; lowering its %s cover "
+                           "and opening it again", shade_id, self._shades[shade_id].name, openness,
+                           cover.role)
             self._emit_stall(shade_id, cover, openness, RetryOutcome.STARTED)
             group.create_task(self._retry(shade_id, active, openness, settings))
             return
@@ -891,47 +907,64 @@ class PowerViewHub:
                      settings: StalledOpenRetry) -> None:
         outcome = RetryOutcome.GAVE_UP
         try:
-            outcome = await self._open_in_steps(shade_id, active, start, settings)
+            outcome = await self._lower_and_open(shade_id, active, start, settings)
         except _Interrupted:
             outcome = RetryOutcome.INTERRUPTED
         except asyncio.CancelledError:
             outcome = RetryOutcome.INTERRUPTED
             raise
         except PowerViewError as err:
-            self._log.debug("A step retrying shade %s failed: %s", shade_id, err)
+            self._log.debug("A move retrying shade %s failed: %s", shade_id, err)
         except Exception:
             self._log.exception("Retrying shade %s failed", shade_id)
         finally:
             del self._active[shade_id]
             if (tracker := self._trackers.get(shade_id)) is not None:
                 tracker.last_target = {}
-            openness = self._cover_openness(shade_id, active.cover)
+            openness = (active.stopped_at if outcome is RetryOutcome.OPENED
+                        else self._cover_openness(shade_id, active.cover))
             name = self._shades[shade_id].name if shade_id in self._shades else ""
             self._log.info("Shade %s (%s) ended at %s: %s", shade_id, name,
                            "unknown" if openness is None else f"{openness:.2f}", outcome)
             self._emit_stall(shade_id, active.cover, openness, outcome)
 
-    async def _open_in_steps(self, shade_id: int, active: _ActiveRetry, start: float,
-                             settings: StalledOpenRetry) -> RetryOutcome:
-        reached = start
-        for openness in retry_steps(start, settings.steps):
-            positions = active.cover.position(openness)
-            active.wake.clear()
-            # Set before sending: the step's motion-started can arrive before the answer.
-            active.expected = openness
-            await self._send_move(shade_id, positions)
-            if not await self._wait(active, self._timing.retry_step_timeout):
-                self._log.debug("Shade %s did not stop within %.0f s", shade_id,
-                                self._timing.retry_step_timeout)
+    async def _lower_and_open(self, shade_id: int, active: _ActiveRetry, start: float,
+                              settings: StalledOpenRetry) -> RetryOutcome:
+        now = start
+        for _ in range(settings.attempts):
+            if not await self._move_and_wait(shade_id, active, max(0.0, now - settings.lower_by)):
                 return RetryOutcome.GAVE_UP
-            active.expected = None
-            active.wake.clear()
-            await self._wait(active, settings.delay)
-            now = self._cover_openness(shade_id, active.cover)
-            if now is None or now <= reached + STEP:
+            # Soon, but not before the motor is still: one left standing long stalled again.
+            await self._wait_quiet(active, self._timing.retry_settle)
+            if not await self._move_and_wait(shade_id, active, 1.0):
                 return RetryOutcome.GAVE_UP
-            reached = now
-        return RetryOutcome.OPENED if reached >= 1.0 - STEP else RetryOutcome.GAVE_UP
+            reached = active.stopped_at
+            if reached is None or reached >= 1.0 - STEP:
+                return RetryOutcome.GAVE_UP if reached is None else RetryOutcome.OPENED
+            now = reached
+        return RetryOutcome.GAVE_UP
+
+    async def _move_and_wait(self, shade_id: int, active: _ActiveRetry, openness: float) -> bool:
+        """Move the cover to `openness` and wait for its motion-stopped; returns whether it came
+        in time."""
+        positions = active.cover.position(round(openness, 2))
+        active.wake.clear()
+        # Set before sending: the move's motion-started can arrive before the answer.
+        active.expected = round(openness, 2)
+        await self._send_move(shade_id, positions)
+        stopped = await self._wait(active, self._timing.retry_move_timeout)
+        active.expected = None
+        if not stopped:
+            self._log.debug("Shade %s did not stop within %.0f s", shade_id,
+                            self._timing.retry_move_timeout)
+        return stopped
+
+    async def _wait_quiet(self, active: _ActiveRetry, seconds: float) -> None:
+        """Wait on the hub's clock until the shade has sent no event for `seconds`; raises
+        `_Interrupted` once the retry is interrupted."""
+        while (left := active.heard_at + seconds - self._clock.monotonic()) > 0:
+            await self._wait(active, left)
+            active.wake.clear()
 
     async def _wait(self, active: _ActiveRetry, seconds: float) -> bool:
         """Wait on the hub's clock until the retry is woken or `seconds` have passed; returns

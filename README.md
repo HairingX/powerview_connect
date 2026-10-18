@@ -126,16 +126,16 @@ command. See Errors for what a command raises.
 
 ### Retrying an opening that stalls
 
-A pleated or cellular shade sent fully open sometimes stalls a little short: its fabric gathers
-at the top and the motor meets too much resistance. Taken the rest of the way in small steps,
-with time between them for the fabric to settle, it opens fully. The hub does that for the
-covers it is turned on for, whoever started the move: this hub, the PowerView app, a voice
-assistant or a scene.
+A pleated or cellular shade sent fully open sometimes stalls short of the top: its fabric gathers
+and the motor meets too much resistance. A motor that stalled was measured not to open again from
+where it stopped, but to open fully from a little lower down. The hub does that for the covers it
+is turned on for, whoever started the move: this hub, the PowerView app, a voice assistant or a
+scene.
 
 ```python
 hub.set_stalled_open_retry(271, CoverRole.SHADE, StalledOpenRetry())  # off until turned on
-hub.stalled_open_retry(271, CoverRole.SHADE)     # StalledOpenRetry(min_openness=0.8, steps=3, delay=90.0)
-hub.set_stalled_open_retry(271, CoverRole.SHADE, StalledOpenRetry(min_openness=0.9, delay=60.0))
+hub.stalled_open_retry(271, CoverRole.SHADE)   # StalledOpenRetry(min_openness=0.8, lower_by=0.1, attempts=2)
+hub.set_stalled_open_retry(271, CoverRole.SHADE, StalledOpenRetry(min_openness=0.9, attempts=3))
 hub.set_stalled_open_retry(271, CoverRole.SHADE, None)  # off; ends a retry in progress
 ```
 
@@ -145,22 +145,24 @@ a top-down/bottom-up shade) of a pleated or cellular shade, whose fabric gathers
 Any other cover is refused with `ValueError`, and a read-only hub refuses with `ReadOnlyError`.
 The hub does not keep which covers it is on for across restarts: that is the host's to keep.
 
-- **What counts.** A `motion-stopped` event for that cover, whose move aimed fully open and which
+- **What counts.** The `motion-stopped` event that ends a move of that cover aimed fully open,
   stopped from `min_openness` (0.8) to just short of open; for a bottom rail, only while the top
   rail is at the top. A stop below `min_openness` is taken as meant. A stop this hub sent is
-  never a stall, nor is a move the hub saw end without an event; a stop from the PowerView app
-  near the top cannot be told from a stall.
-- **What it does.** It opens the cover the rest of the way in `steps` (3) even steps, moving only
-  that cover's rail; after each step has stopped it waits `delay` (90 s) for the fabric to
-  settle, and checks that the cover rose.
+  never a stall, nor is a move the hub saw end without an event, nor a shade that reached the
+  top and slides down by itself; a stop from the PowerView app near the top cannot be told from
+  a stall.
+- **What it does.** It lowers the cover by `lower_by` (0.1) and, once the shade has sent no event
+  for `Timing.retry_settle` (3 s), opens it fully in one move, moving only that cover's rail. Where it stalls again, it does so again
+  from there, up to `attempts` (2) times.
 - **What it says.** `ShadeStalled(shade_id=, role=, openness=, outcome=)` once as it starts
   (`STARTED`, where the cover stopped), and once as it ends, where the cover ended: `OPENED`,
-  fully open; `GAVE_UP`, a step did not raise it, did not stop within `Timing.retry_step_timeout` (90 s), or
-  could not be sent; or `INTERRUPTED`, a command of yours, a move or stop from elsewhere, the
-  shade going offline or leaving the home, turning it off, or `run` ending.
+  fully open; `GAVE_UP`, no attempt opened it fully, or a move did not stop within
+  `Timing.retry_move_timeout` (90 s) or could not be sent; or `INTERRUPTED`, a command of yours,
+  a move or stop from elsewhere, the shade going offline or leaving the home, turning it off, or
+  `run` ending.
 
 It works only while `run` runs, and each retry is a task of `run`'s own, so nothing outlives it.
-Each stalled opening is retried once, one cover of a shade at a time: the steps' own stops are
+Each stalled opening is retried once, one cover of a shade at a time: the retry's own stops are
 not looked at again.
 
 ### Timing, clock and logging
@@ -171,8 +173,9 @@ not looked at again.
   shade is read (`poll_interval`, 1 s), the home (`refresh_interval`, 10 min) and each gateway
   (`gateway_interval`, 1 min); how many moving shades are read at once
   (`max_concurrent_reads`, 3); the waits before reopening the stream; when a move without a
-  stop event has ended (`stall`, `settle`, `start_grace`, `min_timeout`); and how long a step
-  of a retried opening may take (`retry_step_timeout`). It refuses values the hub cannot work
+  stop event has ended (`stall`, `settle`, `start_grace`, `min_timeout`); and how long a move
+  of a retried opening may take (`retry_move_timeout`), and how long a lowered shade is left
+  quiet before it is opened (`retry_settle`). It refuses values the hub cannot work
   with.
 - **`clock`** is any `Clock`: something with `monotonic()` and `async sleep(seconds)`. The
   event loop's own time by default, `testing.ManualClock` in tests.
@@ -256,6 +259,10 @@ async with SimulatedGateway() as gateway:
 
 `refuse_streams` answers the event stream with HTTP 503, `break_streams()` cuts open streams
 off mid-line, and `shade_read_delay` slows each read of a shade down, as on a busy gateway.
+
+`drift(id, positions)` moves a shade without a `motion-started`, as one sliding down from the
+top does, and a shade in `backing_off` takes its next command without one, as a motor that
+stalled backs off instead.
 
 It also drops streams (`drop_streams`), goes offline and comes back (`close`, `start`),
 reports a shade offline (`set_online`) and reports errors for commands (`command_errors`).
