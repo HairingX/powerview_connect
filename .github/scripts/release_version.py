@@ -1,4 +1,4 @@
-"""The release version: work it out, and write it into the package.
+"""The release version: work it out.
 
     release_version.py next KIND DRAFT OVERRIDE TAGS [PUBLISHED]
                                             prints version=, tag=, prerelease= and previous_tag=
@@ -9,15 +9,11 @@
                                             one of every version published, one per line
     release_version.py changes SINCE MERGED refuses a release when MERGED, a file of the pull
                                             requests merged since the release SINCE, is empty
-    release_version.py write VERSION FILE   sets the one `__version__ = "..."` line in FILE
 """
-import re
 import sys
 from pathlib import Path
 
 from packaging.version import InvalidVersion, Version
-
-_LINE = re.compile(r'^__version__ = "[^"\n]*"$', re.MULTILINE)
 
 RELEASE_CANDIDATE = "release candidate"
 FINAL_RELEASE = "final release"
@@ -139,15 +135,6 @@ def _print(version: Version) -> None:
     print(f"prerelease={'true' if version.is_prerelease else 'false'}")
 
 
-def write(text: str, path: Path) -> None:
-    version = _canonical(text)
-    source = path.read_text(encoding="utf-8")
-    found = _LINE.findall(source)
-    if len(found) != 1:
-        sys.exit(f"::error::{path} must hold exactly one `__version__ = \"...\"` line, found {len(found)}")
-    path.write_text(_LINE.sub(f'__version__ = "{version}"', source), encoding="utf-8")
-
-
 if __name__ == "__main__":
     match sys.argv[1:]:
         case ["next", kind, draft, override, tags, *published] if len(published) <= 1:
@@ -158,7 +145,5 @@ if __name__ == "__main__":
             print(f"previous_tag={previous_tag(found, _lines(tags)) or ''}")
         case ["changes", since, merged]:
             require_changes(since, _lines(merged))
-        case ["write", text, path]:
-            write(text, Path(path))
         case _:
             sys.exit(__doc__)
