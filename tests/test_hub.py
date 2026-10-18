@@ -108,11 +108,16 @@ class _RecordingClock(ManualClock):
 @pytest.mark.parametrize("wrong", [
     {"poll_interval": 0.0}, {"stream_idle_timeout": -1.0}, {"reconnect_backoff": ()},
     {"reconnect_backoff": (1.0, -1.0)}, {"max_concurrent_reads": 0},
-    {"removal_confirmations": 0},
+    {"removal_confirmations": 0}, {"stall": 0.0}, {"settle": -0.1}, {"start_grace": 0.0},
+    {"min_timeout": -1.0}, {"retry_step_timeout": 0.0},
 ])
 def test_timing_the_hub_cannot_work_with_is_refused(wrong: dict[str, object]) -> None:
     with pytest.raises(ValueError):
         dataclasses.replace(Timing(), **wrong)
+
+
+def test_a_shade_may_end_its_move_as_soon_as_it_reaches_its_target() -> None:
+    assert Timing(settle=0.0).settle == 0.0
 
 
 async def test_a_loaded_home_has_every_shade_gateway_and_scene(
@@ -543,7 +548,7 @@ async def test_every_gateway_is_asked_of_its_state_and_one_not_answering_keeps_i
         hub = PowerViewHub(session, gateway.host, timing=Timing(request_timeout=1.0))
         await hub.load()
         changed: list[GatewayChanged] = []
-        hub.subscribe_gateway("aux-1", lambda state: changed.append(GatewayChanged(state)))
+        hub.subscribe_gateway("aux-1", lambda state: changed.append(GatewayChanged(state=state)))
         await hub.refresh_gateways()
         assert hub.gateways["SIMULATED-0001"].reachable
         assert hub.gateways["aux-1"].reachable and changed[-1].state.status is not None

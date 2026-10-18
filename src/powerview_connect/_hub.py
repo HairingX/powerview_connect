@@ -38,7 +38,7 @@ type Listener[T] = Callable[[T], None]
 type Unsubscribe = Callable[[], None]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Timing:
     """How often a hub asks the gateways, and how long things may take, in seconds."""
 
@@ -49,6 +49,7 @@ class Timing:
     gateway_interval: float = 60.0
     """Between two questions to each gateway of its own state."""
     request_timeout: float = DEFAULT_TIMEOUT
+    """Longest a request may take before the gateway counts as not answering."""
     stream_idle_timeout: float = 360.0
     """Silence after which the event stream is reopened, to catch one broken without closing."""
     reconnect_backoff: tuple[float, ...] = (1.0, 2.0, 5.0, 10.0, 30.0, 60.0)
@@ -60,9 +61,15 @@ class Timing:
     removal_confirmations: int = 2
     """Reads of the home in a row that must miss a shade, scene or gateway before it is gone."""
     stall: float = 6.0
+    """No change for this long, after a moving shade changed, ends its move."""
     settle: float = 1.5
+    """A shade still at its target for this long has ended its move."""
     start_grace: float = 25.0
+    """Nothing moving this long after a move started ends it: the motor starts some seconds
+    after the command."""
     min_timeout: float = 90.0
+    """The shortest time after which a move ends anyway, however short the gateway's estimate
+    of it."""
     retry_step_timeout: float = 90.0
     """Longest a step of a retried opening may take to stop."""
 
@@ -70,13 +77,15 @@ class Timing:
         """Refuse values the hub cannot work with.
 
         Raises:
-            ValueError: an interval is not positive, no wait is given before reopening the
-                stream, or fewer than one read or confirmation is allowed.
+            ValueError: an interval or a limit of a move is not positive, `settle` is negative, no
+                wait is given before reopening the stream, or fewer than one read or
+                confirmation is allowed.
         """
         intervals = (self.poll_interval, self.refresh_interval, self.gateway_interval,
-                     self.request_timeout, self.stream_idle_timeout, self.retry_step_timeout)
-        if any(interval <= 0 for interval in intervals):
-            raise ValueError(f"intervals and timeouts must be positive: {self}")
+                     self.request_timeout, self.stream_idle_timeout, self.retry_step_timeout,
+                     self.stall, self.start_grace, self.min_timeout)
+        if any(interval <= 0 for interval in intervals) or self.settle < 0:
+            raise ValueError(f"intervals and timeouts must be positive, settle 0 or more: {self}")
         if not self.reconnect_backoff or any(wait < 0 for wait in self.reconnect_backoff):
             raise ValueError(f"reconnect_backoff needs waits of 0 or more: {self}")
         if self.max_concurrent_reads < 1 or self.removal_confirmations < 1:
@@ -96,7 +105,7 @@ class Connection(StrEnum):
     """The gateway does not answer."""
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class ShadeState:
     """A shade as the hub knows it now."""
 
@@ -124,7 +133,7 @@ class ShadeState:
         return covers(self.shade)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class GatewayState:
     """A gateway of the home as the hub knows it now."""
 
@@ -138,7 +147,7 @@ class GatewayState:
     """What it last reported of itself; kept while it does not answer."""
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class HomeDiff:
     """What changed in the home between two reads, besides positions."""
 
@@ -158,28 +167,28 @@ class HomeDiff:
         return any(getattr(self, found.name) for found in dataclasses.fields(self))
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class ShadeChanged:
     """A shade's state changed."""
 
     state: ShadeState
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class GatewayChanged:
     """A gateway's state changed."""
 
     state: GatewayState
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class ConnectionChanged:
     """The connection to the primary gateway changed."""
 
     connection: Connection
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class HomeChanged:
     """Shades, scenes or gateways were added, removed or changed."""
 
@@ -394,7 +403,10 @@ class PowerViewHub:
         return self.home.gateway_of(shade_id) or self.gateway
 
     def snapshot(self) -> dict[str, object]:
-        """What a bug report needs, without addresses, serial numbers or Bluetooth names."""
+        """What a bug report needs, without addresses, serial numbers or Bluetooth names.
+
+        Its keys and their contents are for a person to read, and may change in any release.
+        """
         return {
             "connection": str(self._connection),
             "stream_open": self._stream_open,
@@ -473,9 +485,9 @@ class PowerViewHub:
     def _emit(self, change: Change) -> None:
         self._call(self._listeners.every, change)
         match change:
-            case ShadeChanged(state):
+            case ShadeChanged(state=state):
                 self._call(self._listeners.shades.get(state.id, []), state)
-            case GatewayChanged(state):
+            case GatewayChanged(state=state):
                 self._call(self._listeners.gateways.get(state.gateway.serial, []), state)
             case _:
                 pass
@@ -505,7 +517,7 @@ class PowerViewHub:
         state = self._state_of(shade_id)
         if state != self._states.get(shade_id):
             self._states[shade_id] = state
-            self._emit(ShadeChanged(state))
+            self._emit(ShadeChanged(state=state))
 
     def _set_connection(self) -> None:
         if not self._reachable:
@@ -520,7 +532,7 @@ class PowerViewHub:
             self._log.warning("The PowerView gateway at %s does not answer", self._client.host)
         elif self.available and not was_available and self._home is not None:
             self._log.info("The PowerView gateway at %s answers", self._client.host)
-        self._emit(ConnectionChanged(connection))
+        self._emit(ConnectionChanged(connection=connection))
 
     def _set_reachable(self, reachable: bool) -> None:
         self._reachable = reachable
@@ -632,7 +644,8 @@ class PowerViewHub:
                    | {("gateway", gateway.serial) for gateway in new.gateways})
         for key in present & self._missing.keys():
             del self._missing[key]
-        return Home(new.home_id, tuple(gateways.values()), shades, tuple(scenes.values()))
+        return Home(home_id=new.home_id, gateways=tuple(gateways.values()), shades=shades,
+                    scenes=tuple(scenes.values()))
 
     def _confirm_missing(self, key: tuple[str, int | str]) -> bool:
         """Count one more read missing `key`; returns whether it is still kept."""
@@ -658,8 +671,11 @@ class PowerViewHub:
         gateways_added, gateways_removed, gateways_changed = _diff(
             {gateway.serial: _gateway_metadata(gateway) for gateway in old.gateways},
             {gateway.serial: _gateway_metadata(gateway) for gateway in home.gateways})
-        diff = HomeDiff(added, removed, changed | moved, scenes_added, scenes_removed,
-                        scenes_changed, gateways_added, gateways_removed, gateways_changed)
+        diff = HomeDiff(
+            added_shades=added, removed_shades=removed, changed_shades=changed | moved,
+            added_scenes=scenes_added, removed_scenes=scenes_removed,
+            changed_scenes=scenes_changed, added_gateways=gateways_added,
+            removed_gateways=gateways_removed, changed_gateways=gateways_changed)
         self._home = home
         for shade_id in removed:
             for key in [key for key in self._retries if key[0] == shade_id]:
@@ -683,11 +699,11 @@ class PowerViewHub:
                 if shade_id not in added:
                     changed_states.append(state)
         for serial in self._set_gateways(home):
-            self._emit(GatewayChanged(self._gateway_states[serial]))
+            self._emit(GatewayChanged(state=self._gateway_states[serial]))
         if diff:
-            self._emit(HomeChanged(home, diff))
+            self._emit(HomeChanged(home=home, diff=diff))
         for state in changed_states:
-            self._emit(ShadeChanged(state))
+            self._emit(ShadeChanged(state=state))
 
     async def refresh_gateways(self) -> None:
         """Ask every gateway that can be asked of its own state, all at once.
@@ -713,7 +729,7 @@ class PowerViewHub:
                 state = dataclasses.replace(old, reachable=True, status=answer)
             if state != old:
                 self._gateway_states[serial] = state
-                self._emit(GatewayChanged(state))
+                self._emit(GatewayChanged(state=state))
         if unexpected is not None:
             raise unexpected
 

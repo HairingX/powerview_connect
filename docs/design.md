@@ -7,15 +7,26 @@ What the library does with what `protocol.md` says a real gateway does.
 The package's `__all__` is its whole public API, and the README documents nothing else:
 
 - **The hub:** `PowerViewHub`, its `Timing`, the `Clock` it may be given, and the
-  `StalledOpenRetry` a shade may be given, with its `RetryOutcome`.
+  `StalledOpenRetry` a cover may be given, with its `RetryOutcome`.
 - **What it knows:** `ShadeState`, `GatewayState` and `Connection`; the home as the gateway
   describes it: `Home`, `Shade`, `Scene`, `Gateway`, `GatewayStatus`, `Rail`, `Capabilities`,
   `BatteryStatus`; and the covers: `CoverSpec`, `CoverRole`.
 - **Changes:** `Change`, `ShadeChanged`, `GatewayChanged`, `ConnectionChanged`, `HomeChanged`,
-  `ShadeStalled`,
-  `HomeDiff`.
+  `ShadeStalled`, `HomeDiff`.
 - **Errors:** `PowerViewError` and its kinds, and `CommandFailure`.
-- **`powerview_connect.testing`:** the simulated gateway and the manual clock.
+- **`powerview_connect.testing`:** the simulated gateway, what it holds, and the manual clock.
+
+It is built to grow without breaking what uses it, as the README's Stability section promises:
+
+- **Every data class takes its fields by name** (`kw_only`), which also leaves it no positional
+  `match` pattern: a field can be added anywhere, and the order of fields is no promise.
+- **Values a host may keep are stable.** An enum member's value can end up in a host's own ids,
+  such as a cover's role in an entity's unique id, and which covers a capability gives decides
+  which entities a host has; both change only in a breaking release.
+- **A setting names what it is for**, a retry its cover by shade id and role, so a second such
+  cover on one shade needs no new signature.
+- **Collections handed out are read-only:** `Mapping` copies of what the hub knows, and tuples
+  for a home's gateways and scenes and a `CommandError`'s failures.
 
 Everything else lives in modules whose names start with an underscore and may change in any
 release: the HTTP client, the parsers, the event stream's events, the motion tracker. A program

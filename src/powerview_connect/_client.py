@@ -44,10 +44,11 @@ class StreamIdleError(CannotConnectError):
 class CommandError(PowerViewError):
     """The gateway took a command but reported an error for it."""
 
-    def __init__(self, failures: list[CommandFailure]) -> None:
+    def __init__(self, failures: Iterable[CommandFailure]) -> None:
         """An error for what the gateway reported; its message names shades by their id."""
-        super().__init__("; ".join(str(failure) for failure in failures))
-        self.failures = failures
+        self.failures = tuple(failures)
+        """Each error the gateway reported."""
+        super().__init__("; ".join(str(failure) for failure in self.failures))
 
     @property
     def shade_ids(self) -> frozenset[int]:

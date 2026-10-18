@@ -1,6 +1,7 @@
 """The package as it is installed: what a type checker and a user of it see."""
 import importlib.metadata
 import importlib.resources
+import dataclasses
 import re
 
 import powerview_connect
@@ -29,6 +30,18 @@ def test_everything_it_names_is_there() -> None:
     for package in (powerview_connect, powerview_connect.testing):
         for name in package.__all__:
             assert hasattr(package, name), name
+
+
+def test_every_data_class_it_names_takes_its_fields_by_name() -> None:
+    """A field can then be added anywhere without breaking a caller, or a `match` on it."""
+    import powerview_connect.testing
+
+    for package in (powerview_connect, powerview_connect.testing):
+        for name in package.__all__:
+            found: object = getattr(package, name)
+            if isinstance(found, type) and dataclasses.is_dataclass(found):
+                assert all(field.kw_only for field in dataclasses.fields(found)), name
+                assert getattr(found, "__match_args__", ()) == (), name
 
 
 def test_its_only_dependency_is_aiohttp() -> None:

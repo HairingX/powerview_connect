@@ -167,11 +167,13 @@ not looked at again.
 
 `PowerViewHub(session, host, timing=Timing(...), clock=..., logger=...)`:
 
-- **`Timing`** holds every interval and limit: how often a moving shade is read
-  (`poll_interval`, 1 s), the home (`refresh_interval`, 10 min) and each gateway
+- **`Timing`** holds every interval and limit, each documented on its field: how often a moving
+  shade is read (`poll_interval`, 1 s), the home (`refresh_interval`, 10 min) and each gateway
   (`gateway_interval`, 1 min); how many moving shades are read at once
-  (`max_concurrent_reads`, 3); the waits before reopening the stream; and when a move without
-  a stop event has ended.
+  (`max_concurrent_reads`, 3); the waits before reopening the stream; when a move without a
+  stop event has ended (`stall`, `settle`, `start_grace`, `min_timeout`); and how long a step
+  of a retried opening may take (`retry_step_timeout`). It refuses values the hub cannot work
+  with.
 - **`clock`** is any `Clock`: something with `monotonic()` and `async sleep(seconds)`. The
   event loop's own time by default, `testing.ManualClock` in tests.
 - **The logger** is `powerview_connect` by default. At debug level it logs every event and
@@ -257,6 +259,26 @@ off mid-line, and `shade_read_delay` slows each read of a shade down, as on a bu
 
 It also drops streams (`drop_streams`), goes offline and comes back (`close`, `start`),
 reports a shade offline (`set_online`) and reports errors for commands (`command_errors`).
+What it holds can be changed directly: `shades` (`SimulatedShade`), `scenes` (`SimulatedScene`)
+and `gateways` (`ListedGateway`).
+
+## Stability
+
+What `powerview_connect` and `powerview_connect.testing` name in `__all__` is the public API;
+everything else may change in any release.
+
+- **Any release may add** a field, a keyword argument, a method, a kind of `Change`, a member
+  of an enum, or an error that is a kind of one already raised. Every data class takes its
+  fields by name, in construction and in `match`, so a new field breaks no caller. A listener
+  or `match` over changes passes over the kinds it does not know, and one over an enum keeps a
+  default case.
+- **Only a breaking release changes** the name or meaning of anything public, the value of an
+  enum member (a host may keep it, in an id of its own), or which covers a shade's capabilities
+  give it, with their roles.
+- **Never promised:** what `snapshot()` holds, and what is logged.
+- **A breaking release** raises at least the minor version, and its notes say what broke.
+  What can warn first does, with a `DeprecationWarning`, for at least one release before it
+  goes.
 
 ## Links
 

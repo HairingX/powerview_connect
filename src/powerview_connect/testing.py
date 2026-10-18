@@ -22,7 +22,14 @@ from aiohttp import web
 
 from ._model import RAILS, Capabilities, EventKind, Rail
 
-__all__ = ["ManualClock", "Request", "SimulatedGateway", "SimulatedShade"]
+__all__ = [
+    "ListedGateway",
+    "ManualClock",
+    "Request",
+    "SimulatedGateway",
+    "SimulatedScene",
+    "SimulatedShade",
+]
 
 _BREAK = "break"
 """Put on a stream's queue to cut the stream off."""
@@ -69,7 +76,7 @@ class ManualClock:
         await asyncio.sleep(0)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Request:
     """A request the simulated gateway received."""
 
@@ -79,7 +86,7 @@ class Request:
     body: object
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, kw_only=True)
 class SimulatedShade:
     """A shade of the simulated gateway; change it to change what the gateway reports."""
 
@@ -127,24 +134,30 @@ class SimulatedShade:
         return document
 
 
-@dataclass(slots=True)
-class _Gateway:
+@dataclass(slots=True, kw_only=True)
+class ListedGateway:
+    """A gateway as the simulated home lists it; the first is the simulated gateway itself."""
+
     id: int
     serial: str
     name: str
     ip: str
     aux: bool
+    """An auxiliary gateway, not the primary one."""
     model: str = "Pro"
     firmware: str = "3.2.59"
     radio_firmware: str = "3.0.43"
 
 
-@dataclass(slots=True)
-class _Scene:
+@dataclass(slots=True, kw_only=True)
+class SimulatedScene:
+    """A scene the simulated home holds."""
+
     id: int
     name: str
     room_id: int
     members: dict[int, dict[Rail, float]]
+    """The positions it moves each of its shades to, by shade id."""
 
 
 def _iso_now() -> str:
@@ -167,7 +180,9 @@ class SimulatedGateway:
     ) -> None:
         """A gateway that lists itself at 127.0.0.1, as the primary gateway unless `primary` is
         False."""
-        self.gateways: list[_Gateway] = [_Gateway(1, serial, name, "127.0.0.1", aux=not primary)]
+        self.gateways: list[ListedGateway] = [
+            ListedGateway(id=1, serial=serial, name=name, ip="127.0.0.1", aux=not primary)]
+        """The gateways the home lists, this one first."""
         self.interface = "eth0"
         """The network interface the gateway reports in use."""
         self.internet_state = "Connected"
@@ -179,7 +194,8 @@ class SimulatedGateway:
         self.home_id = home_id
         self.rooms: dict[int, str] = {}
         self.shades: dict[int, SimulatedShade] = {}
-        self.scenes: dict[int, _Scene] = {}
+        self.scenes: dict[int, SimulatedScene] = {}
+        """The scenes of the home, by id."""
         self.requests: list[Request] = []
         """Every request received, oldest first."""
         self.command_errors: dict[int, int] = {}
@@ -205,7 +221,8 @@ class SimulatedGateway:
 
         `ip` may carry a port, to list another simulated gateway by its `host`.
         """
-        self.gateways.append(_Gateway(len(self.gateways) + 1, serial, name, ip, aux))
+        self.gateways.append(
+            ListedGateway(id=len(self.gateways) + 1, serial=serial, name=name, ip=ip, aux=aux))
 
     def add_room(self, room_id: int, name: str) -> None:
         """Add a room for shades and scenes to be in."""
@@ -232,7 +249,8 @@ class SimulatedGateway:
         `gateway` is the serial number of the gateway that serves it; None for this one.
         """
         shade = SimulatedShade(
-            shade_id, name, room_id, int(capabilities), shade_type,
+            id=shade_id, name=name, room_id=room_id, capabilities=int(capabilities),
+            type=shade_type,
             power_type=power_type, firmware=firmware, serial=serial,
             signal_strength=signal_strength, battery_status=battery_status, gateway=gateway,
         )
@@ -248,8 +266,9 @@ class SimulatedGateway:
         self, scene_id: int, name: str, *, room_id: int, members: Mapping[int, Mapping[Rail, float]]
     ) -> None:
         """Add a scene moving each member shade to its positions."""
-        self.scenes[scene_id] = _Scene(
-            scene_id, name, room_id, {shade: dict(positions) for shade, positions in members.items()}
+        self.scenes[scene_id] = SimulatedScene(
+            id=scene_id, name=name, room_id=room_id,
+            members={shade: dict(positions) for shade, positions in members.items()},
         )
 
     def home(self) -> dict[str, object]:
@@ -432,7 +451,8 @@ class SimulatedGateway:
         body: object = None
         if request.can_read_body:
             body = cast(object, await request.json())
-        self.requests.append(Request(request.method, request.path, dict(request.query), body))
+        self.requests.append(Request(method=request.method, path=request.path, query=dict(request.query),
+                                     body=body))
         return body
 
     def _shade_ids(self, request: web.Request) -> list[SimulatedShade]:

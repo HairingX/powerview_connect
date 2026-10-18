@@ -73,7 +73,7 @@ class EventKind(StrEnum):
     SHADE_OFFLINE = "shade-offline"
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Gateway:
     """A gateway of the home: the primary one, or an auxiliary one."""
 
@@ -90,7 +90,7 @@ class Gateway:
     """The shades the gateway serves."""
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class GatewayStatus:
     """What a gateway reports of itself."""
 
@@ -124,7 +124,7 @@ class GatewayStatus:
         return None if self.internet_state is None else self.internet_state == "Connected"
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Shade:
     """A shade, as the gateway last knew it."""
 
@@ -189,7 +189,7 @@ class Shade:
         return capability.name.replace("_", " ").title()
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Scene:
     """A scene stored on the gateway."""
 
@@ -198,7 +198,7 @@ class Scene:
     room_id: int | None
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class Home:
     """The gateway's whole home: its gateways, shades and scenes."""
 
@@ -402,7 +402,7 @@ def parse_event(line: str) -> ShadeEvent | None:
     )
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class CommandFailure:
     """One error the gateway reported for a command."""
 
@@ -427,8 +427,8 @@ def command_errors(response: object) -> list[CommandFailure]:
         return []
     failures: list[CommandFailure] = []
     if found.get("err") not in (None, 0):
-        failures.append(CommandFailure(None, found.get("err")))
+        failures.append(CommandFailure(shade_id=None, code=found.get("err")))
     for item in _objects(found.get("responses")):
         if item.get("err") not in (None, 0):
-            failures.append(CommandFailure(_int(item.get("id")), item.get("err")))
+            failures.append(CommandFailure(shade_id=_int(item.get("id")), code=item.get("err")))
     return failures

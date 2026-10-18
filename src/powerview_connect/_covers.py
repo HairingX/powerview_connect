@@ -39,7 +39,7 @@ class CoverRole(StrEnum):
     """The vanes of a shade that only tilts."""
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class CoverSpec:
     """One cover of a shade: the rail it moves, and whether it also tilts the vanes.
 
@@ -118,17 +118,18 @@ def covers(shade: Shade) -> tuple[CoverSpec, ...]:
     capability = shade.capability
     match capability:
         case Capabilities.TOP_DOWN_BOTTOM_UP:
-            return (CoverSpec(CoverRole.TOP, Rail.SECONDARY),
-                    CoverSpec(CoverRole.BOTTOM, Rail.PRIMARY, retryable=pleated))
+            return (CoverSpec(role=CoverRole.TOP, rail=Rail.SECONDARY),
+                    CoverSpec(role=CoverRole.BOTTOM, rail=Rail.PRIMARY, retryable=pleated))
         case Capabilities.TOP_DOWN:
-            return (CoverSpec(CoverRole.SHADE, Rail.PRIMARY, inverted=True, retryable=pleated),)
+            return (CoverSpec(role=CoverRole.SHADE, rail=Rail.PRIMARY, inverted=True,
+                              retryable=pleated),)
         case Capabilities.TILT_ONLY_180:
-            return (CoverSpec(CoverRole.VANES, None),)
+            return (CoverSpec(role=CoverRole.VANES, rail=None),)
         case _ if capability in _DUAL_OVERLAPPED:
-            return (CoverSpec(CoverRole.FRONT, Rail.PRIMARY,
+            return (CoverSpec(role=CoverRole.FRONT, rail=Rail.PRIMARY,
                               tilt=capability is not Capabilities.DUAL_OVERLAPPED),
-                    CoverSpec(CoverRole.REAR, Rail.SECONDARY))
+                    CoverSpec(role=CoverRole.REAR, rail=Rail.SECONDARY))
         case _:
-            return (CoverSpec(CoverRole.SHADE, Rail.PRIMARY, tilt=capability in _TILTS,
+            return (CoverSpec(role=CoverRole.SHADE, rail=Rail.PRIMARY, tilt=capability in _TILTS,
                               vertical=capability in _VERTICAL, retryable=pleated),)
 
