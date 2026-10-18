@@ -34,7 +34,7 @@ from ._model import (
     Scene,
     Shade,
 )
-from ._recovery import StallOutcome, StallRecovery
+from ._retry import RetryOutcome, StalledOpenRetry
 
 __version__ = _installed_version("powerview_connect")
 __all__ = [
@@ -61,12 +61,12 @@ __all__ = [
     "Rail",
     "ReadOnlyError",
     "ResponseError",
+    "RetryOutcome",
     "Scene",
     "Shade",
     "ShadeChanged",
     "ShadeStalled",
     "ShadeState",
-    "StallOutcome",
-    "StallRecovery",
+    "StalledOpenRetry",
     "Timing",
 ]

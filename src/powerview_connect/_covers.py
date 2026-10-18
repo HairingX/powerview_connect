@@ -18,6 +18,8 @@ _DUAL_OVERLAPPED = frozenset({
     Capabilities.DUAL_OVERLAPPED_TILT_180,
 })
 _VERTICAL = frozenset({Capabilities.VERTICAL, Capabilities.VERTICAL_TILT_180})
+PLEATED_TYPES = frozenset({6, 7, 8, 9, 10, 33, 47})
+"""The `type` of a pleated or cellular shade, whose fabric gathers as it opens; 6 and 8 measured."""
 
 
 class CoverRole(StrEnum):
@@ -54,12 +56,9 @@ class CoverSpec:
     """The rail's 0.0 is open, as for a top-down shade, which opens downwards."""
     vertical: bool = False
     """The shade draws sideways, as a curtain does."""
-
-    @property
-    def recoverable(self) -> bool:
-        """Whether the cover opens upwards, so a hub can raise it when it stops short of fully
-        open."""
-        return self.role in (CoverRole.SHADE, CoverRole.BOTTOM)
+    retryable: bool = False
+    """An opening that stalls can be retried in steps: the cover opens upwards, and its fabric
+    gathers as it opens."""
 
     def openness(self, positions: Mapping[Rail, float]) -> float | None:
         """How far the cover's rail is open in `positions`; None without a rail or a value."""
@@ -115,13 +114,14 @@ def covers(shade: Shade) -> tuple[CoverSpec, ...]:
 
     Only the top-down/bottom-up shade has been measured; the others follow the API description.
     """
+    pleated = shade.type in PLEATED_TYPES
     capability = shade.capability
     match capability:
         case Capabilities.TOP_DOWN_BOTTOM_UP:
             return (CoverSpec(CoverRole.TOP, Rail.SECONDARY),
-                    CoverSpec(CoverRole.BOTTOM, Rail.PRIMARY))
+                    CoverSpec(CoverRole.BOTTOM, Rail.PRIMARY, retryable=pleated))
         case Capabilities.TOP_DOWN:
-            return (CoverSpec(CoverRole.SHADE, Rail.PRIMARY, inverted=True),)
+            return (CoverSpec(CoverRole.SHADE, Rail.PRIMARY, inverted=True, retryable=pleated),)
         case Capabilities.TILT_ONLY_180:
             return (CoverSpec(CoverRole.VANES, None),)
         case _ if capability in _DUAL_OVERLAPPED:
@@ -130,5 +130,5 @@ def covers(shade: Shade) -> tuple[CoverSpec, ...]:
                     CoverSpec(CoverRole.REAR, Rail.SECONDARY))
         case _:
             return (CoverSpec(CoverRole.SHADE, Rail.PRIMARY, tilt=capability in _TILTS,
-                              vertical=capability in _VERTICAL),)
+                              vertical=capability in _VERTICAL, retryable=pleated),)
 
