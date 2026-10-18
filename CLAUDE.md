@@ -45,8 +45,13 @@ obvious from the name - one or two lines, no narrative.
 - aiohttp is the only runtime dependency. No Home Assistant imports.
 - The tests run the real client against the simulated gateway (`powerview_connect.testing`), an
   HTTP server on 127.0.0.1 that behaves as a real gateway was measured to; captures from a real
-  gateway are the fixtures of the parsing and motion tests. A change to what the gateway is
+  gateway are the fixtures of the parsing and motion tests. Every capture is kept whole,
+  anonymized as `captures/README.md` says, in `captures/`. A change to what the gateway is
   known to do changes `docs/protocol.md`, the simulated gateway and the captures together.
+- Measurements are the source of truth. Hunter Douglas's description of the API is the only
+  other source: `docs/api.md` says in this project's own words what it states, and whether each
+  statement was measured. No other project's code or documentation, the description included,
+  is copied into the repository.
 - Live tests (`tests/test_live_*.py`) only read - `GET /home` and the event stream, with a
   read-only client - never move a shade, and skip themselves unless a gateway is configured.
   CI runs `pytest -m "not live"`.

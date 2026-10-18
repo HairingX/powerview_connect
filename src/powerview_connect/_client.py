@@ -74,10 +74,11 @@ class StreamIdleError(CannotConnectError):
 class CommandError(PowerViewError):
     """The gateway took a command but reported an error for it."""
 
-    def __init__(self, failures: list[CommandFailure]) -> None:
+    def __init__(self, failures: Iterable[CommandFailure]) -> None:
         """An error for what the gateway reported; its message names shades by their id."""
-        super().__init__("; ".join(str(failure) for failure in failures))
-        self.failures = failures
+        self.failures = tuple(failures)
+        """Each error the gateway reported."""
+        super().__init__("; ".join(str(failure) for failure in self.failures))
 
     @property
     def shade_ids(self) -> frozenset[int]:
@@ -100,14 +101,14 @@ def _ids(shade_ids: Iterable[int]) -> str:
 class PowerViewClient:
     """A client for one PowerView Gen 3 gateway, on a session its owner keeps.
 
-    Endpoints, as the Gen 3 API documents them and a gateway was measured to answer:
+    Endpoints, as a gateway was measured to answer:
 
     - `GET /home`: the whole home
     - `GET /gateway`: the gateway's own state; auxiliary gateways answer it too
     - `GET /home/shades/{id}`: one shade; its positions change live while it moves
     - `PUT /home/shades/positions?ids=...`: move; a rail not given is not changed
     - `PUT /home/shades/stop?ids=...`
-    - `PUT /home/scenes/{id}/activate`
+    - `PUT /home/scenes/{id}/activate`, not measured
     - `PUT /home/shades/{id}/motion` with `{"motion": "jog"}`, the only motion it takes
     - `GET /home/shades/events?sse=true`: shade events, as server-sent events
     """

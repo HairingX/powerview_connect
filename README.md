@@ -98,6 +98,7 @@ same changes for an `async for`.
 | `GatewayChanged` | a gateway answered or stopped answering, or reported another state |
 | `ConnectionChanged` | the hub's connection to the primary gateway changed |
 | `HomeChanged` | shades, scenes or gateways were added, removed or changed; its `diff` says which |
+| `ShadeStalled` | a cover stopped short of fully open and is being raised, or the raising ended; see below |
 
 ### Covers
 
@@ -123,15 +124,56 @@ openness.
 A read-only hub (`PowerViewHub(..., read_only=True)`) follows the home and refuses every
 command. See Errors for what a command raises.
 
+### Retrying an opening that stalls
+
+A pleated or cellular shade sent fully open sometimes stalls a little short: its fabric gathers
+at the top and the motor meets too much resistance. Taken the rest of the way in small steps,
+with time between them for the fabric to settle, it opens fully. The hub does that for the
+covers it is turned on for, whoever started the move: this hub, the PowerView app, a voice
+assistant or a scene.
+
+```python
+hub.set_stalled_open_retry(271, CoverRole.SHADE, StalledOpenRetry())  # off until turned on
+hub.stalled_open_retry(271, CoverRole.SHADE)     # StalledOpenRetry(min_openness=0.8, steps=3, delay=90.0)
+hub.set_stalled_open_retry(271, CoverRole.SHADE, StalledOpenRetry(min_openness=0.9, delay=60.0))
+hub.set_stalled_open_retry(271, CoverRole.SHADE, None)  # off; ends a retry in progress
+```
+
+It is set per cover, by the shade's id and the cover's `role`. `CoverSpec.retryable` says which
+cover of a shade can be retried: one that opens upwards (a `SHADE` cover, or the `BOTTOM` rail of
+a top-down/bottom-up shade) of a pleated or cellular shade, whose fabric gathers as it opens.
+Any other cover is refused with `ValueError`, and a read-only hub refuses with `ReadOnlyError`.
+The hub does not keep which covers it is on for across restarts: that is the host's to keep.
+
+- **What counts.** A `motion-stopped` event for that cover, whose move aimed fully open and which
+  stopped from `min_openness` (0.8) to just short of open; for a bottom rail, only while the top
+  rail is at the top. A stop below `min_openness` is taken as meant. A stop this hub sent is
+  never a stall, nor is a move the hub saw end without an event; a stop from the PowerView app
+  near the top cannot be told from a stall.
+- **What it does.** It opens the cover the rest of the way in `steps` (3) even steps, moving only
+  that cover's rail; after each step has stopped it waits `delay` (90 s) for the fabric to
+  settle, and checks that the cover rose.
+- **What it says.** `ShadeStalled(shade_id=, role=, openness=, outcome=)` once as it starts
+  (`STARTED`, where the cover stopped), and once as it ends, where the cover ended: `OPENED`,
+  fully open; `GAVE_UP`, a step did not raise it, did not stop within `Timing.retry_step_timeout` (90 s), or
+  could not be sent; or `INTERRUPTED`, a command of yours, a move or stop from elsewhere, the
+  shade going offline or leaving the home, turning it off, or `run` ending.
+
+It works only while `run` runs, and each retry is a task of `run`'s own, so nothing outlives it.
+Each stalled opening is retried once, one cover of a shade at a time: the steps' own stops are
+not looked at again.
+
 ### Timing, clock and logging
 
 `PowerViewHub(session, host, timing=Timing(...), clock=..., logger=...)`:
 
-- **`Timing`** holds every interval and limit: how often a moving shade is read
-  (`poll_interval`, 1 s), the home (`refresh_interval`, 10 min) and each gateway
+- **`Timing`** holds every interval and limit, each documented on its field: how often a moving
+  shade is read (`poll_interval`, 1 s), the home (`refresh_interval`, 10 min) and each gateway
   (`gateway_interval`, 1 min); how many moving shades are read at once
-  (`max_concurrent_reads`, 3); the waits before reopening the stream; and when a move without
-  a stop event has ended.
+  (`max_concurrent_reads`, 3); the waits before reopening the stream; when a move without a
+  stop event has ended (`stall`, `settle`, `start_grace`, `min_timeout`); and how long a step
+  of a retried opening may take (`retry_step_timeout`). It refuses values the hub cannot work
+  with.
 - **`clock`** is any `Clock`: something with `monotonic()` and `async sleep(seconds)`. The
   event loop's own time by default, `testing.ManualClock` in tests.
 - **The logger** is `powerview_connect` by default. At debug level it logs every event and
@@ -204,6 +246,7 @@ async with SimulatedGateway() as gateway:
         gateway.move(10, {Rail.PRIMARY: 0.2})        # part of the way, as a read sees it
         await clock.advance(1)                       # the hub reads the moving shade
         gateway.finish(10)                           # at the target; motion-stopped
+        # gateway.finish(10, at={Rail.PRIMARY: 0.9}) ends it short of the target instead
         print(gateway.requests[-1].body)
 ```
 
@@ -216,6 +259,21 @@ off mid-line, and `shade_read_delay` slows each read of a shade down, as on a bu
 
 It also drops streams (`drop_streams`), goes offline and comes back (`close`, `start`),
 reports a shade offline (`set_online`) and reports errors for commands (`command_errors`).
+What it holds can be changed directly: `shades` (`SimulatedShade`), `scenes` (`SimulatedScene`)
+and `gateways` (`ListedGateway`).
+
+## Stability
+
+What `powerview_connect` and `powerview_connect.testing` name in `__all__` is the public API;
+everything else may change in any release.
+
+- **Any release may add** a field, a keyword argument, a method, a kind of `Change`, a member
+  of an enum, or an error that is a kind of one already raised. Every data class takes its
+  fields by name, in construction and in `match`, so a new field breaks no caller. A listener
+  or `match` over changes passes over the kinds it does not know, and one over an enum keeps a
+  default case.
+- **A breaking release** raises at least the minor version, and its notes say what broke.
+- **Never promised:** what `snapshot()` holds, and what is logged.
 
 ## Links
 

@@ -1,0 +1,7 @@
+100 HELO
+
+data: {"evt":"battery-alert","isoDate":"2026-10-15T13:54:47.917Z","bleName":"DU1:0154","id":154,"currentPositions":{"primary":0,"secondary":0.71,"tilt":0},"batteryLevel":1}
+
+data: {"evt":"motion-started","isoDate":"2026-10-15T13:54:48.474Z","bleName":"DU1:0154","id":154,"currentPositions":{"primary":0,"secondary":0.71,"tilt":0},"targetPositions":{"primary":0,"secondary":0.5,"tilt":0,"etaInSeconds":10}}
+
+data: {"evt":"motion-stopped","isoDate":"2026-10-15T13:55:07.385Z","bleName":"DU1:0154","id":154,"currentPositions":{"primary":0,"secondary":0.5,"tilt":0}}

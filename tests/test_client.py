@@ -159,6 +159,7 @@ async def test_an_error_the_gateway_reports_for_a_shade_is_raised(
     with pytest.raises(CommandError, match="shade 154") as raised:
         await client.set_positions([154], primary=0.5)
     assert [str(failure) for failure in raised.value.failures] == ["shade 154 err=7"]
+    assert isinstance(raised.value.failures, tuple)
     assert raised.value.shade_ids == {154} and "SIM:" not in str(raised.value)
 
 
