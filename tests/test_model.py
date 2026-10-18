@@ -125,7 +125,7 @@ def test_a_command_the_gateway_took_has_no_errors() -> None:
 def test_errors_of_the_gateway_and_of_each_shade_are_named_by_id_alone() -> None:
     failures = command_errors({"err": 3, "responses": [
         {"bleName": "DU1:0154", "err": 7, "id": 154}, {"id": 155, "err": 0}]})
-    assert failures == [CommandFailure(None, 3), CommandFailure(154, 7)]
+    assert failures == [CommandFailure(shade_id=None, code=3), CommandFailure(shade_id=154, code=7)]
     assert [str(failure) for failure in failures] == ["gateway err=3", "shade 154 err=7"]
 
 

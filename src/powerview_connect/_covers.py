@@ -18,6 +18,8 @@ _DUAL_OVERLAPPED = frozenset({
     Capabilities.DUAL_OVERLAPPED_TILT_180,
 })
 _VERTICAL = frozenset({Capabilities.VERTICAL, Capabilities.VERTICAL_TILT_180})
+PLEATED_TYPES = frozenset({6, 7, 8, 9, 10, 33, 47})
+"""The `type` of a pleated or cellular shade, whose fabric gathers as it opens; 6 and 8 measured."""
 
 
 class CoverRole(StrEnum):
@@ -37,7 +39,7 @@ class CoverRole(StrEnum):
     """The vanes of a shade that only tilts."""
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class CoverSpec:
     """One cover of a shade: the rail it moves, and whether it also tilts the vanes.
 
@@ -54,6 +56,9 @@ class CoverSpec:
     """The rail's 0.0 is open, as for a top-down shade, which opens downwards."""
     vertical: bool = False
     """The shade draws sideways, as a curtain does."""
+    retryable: bool = False
+    """An opening that stalls can be retried in steps: the cover opens upwards, and its fabric
+    gathers as it opens."""
 
     def openness(self, positions: Mapping[Rail, float]) -> float | None:
         """How far the cover's rail is open in `positions`; None without a rail or a value."""
@@ -110,20 +115,22 @@ def covers(shade: Shade) -> tuple[CoverSpec, ...]:
     Only bottom-up and top-down/bottom-up shades have been measured; the others follow the API
     description.
     """
+    pleated = shade.type in PLEATED_TYPES
     capability = shade.capability
     match capability:
         case Capabilities.TOP_DOWN_BOTTOM_UP:
-            return (CoverSpec(CoverRole.TOP, Rail.SECONDARY),
-                    CoverSpec(CoverRole.BOTTOM, Rail.PRIMARY))
+            return (CoverSpec(role=CoverRole.TOP, rail=Rail.SECONDARY),
+                    CoverSpec(role=CoverRole.BOTTOM, rail=Rail.PRIMARY, retryable=pleated))
         case Capabilities.TOP_DOWN:
-            return (CoverSpec(CoverRole.SHADE, Rail.PRIMARY, inverted=True),)
+            return (CoverSpec(role=CoverRole.SHADE, rail=Rail.PRIMARY, inverted=True,
+                              retryable=pleated),)
         case Capabilities.TILT_ONLY_180:
-            return (CoverSpec(CoverRole.VANES, None),)
+            return (CoverSpec(role=CoverRole.VANES, rail=None),)
         case _ if capability in _DUAL_OVERLAPPED:
-            return (CoverSpec(CoverRole.FRONT, Rail.PRIMARY,
+            return (CoverSpec(role=CoverRole.FRONT, rail=Rail.PRIMARY,
                               tilt=capability is not Capabilities.DUAL_OVERLAPPED),
-                    CoverSpec(CoverRole.REAR, Rail.SECONDARY))
+                    CoverSpec(role=CoverRole.REAR, rail=Rail.SECONDARY))
         case _:
-            return (CoverSpec(CoverRole.SHADE, Rail.PRIMARY, tilt=capability in _TILTS,
-                              vertical=capability in _VERTICAL),)
+            return (CoverSpec(role=CoverRole.SHADE, rail=Rail.PRIMARY, tilt=capability in _TILTS,
+                              vertical=capability in _VERTICAL, retryable=pleated),)
 
