@@ -35,6 +35,8 @@ class ShadeTracker:
         self.last_target: dict[Rail, float] = {}
         """The targets of the last move once it has ended, until the next one begins; emptied by
         a stop sent, as a stopped move did not aim where it ended."""
+        self.span: dict[Rail, tuple[float, float]] = {}
+        """The lowest and highest position of each rail since the last move began."""
         self.moving = False
         self.eta: float | None = None
         """The gateway's estimate of the current move's time in seconds."""
@@ -52,6 +54,8 @@ class ShadeTracker:
     def _apply(self, positions: Positions) -> bool:
         changed = False
         for rail, value in positions.items():
+            low, high = self.span.get(rail, (value, value))
+            self.span[rail] = (min(low, value), max(high, value))
             old = self.current[rail]
             if old is None or value != old:
                 if old is not None:
@@ -64,6 +68,8 @@ class ShadeTracker:
         self.moving = True
         self.target = dict.fromkeys(RAILS)
         self.last_target = {}
+        self.span = {rail: (value, value) for rail, value in self.current.items()
+                     if value is not None}
         self._started_at = now
         self._last_change_at = now
         self._changed_since_start = False

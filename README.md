@@ -135,7 +135,7 @@ hub, the PowerView app, a voice assistant or a scene.
 ```python
 hub.set_stalled_open_retry(271, CoverRole.SHADE, StalledOpenRetry())  # off until turned on
 hub.stalled_open_retry(271, CoverRole.SHADE)
-# StalledOpenRetry(min_openness=0.8, lower_to=0.8, rounds=3, delay=300.0)
+# StalledOpenRetry(min_openness=0.8, back_offs=4, rounds=3, delay=300.0)
 hub.set_stalled_open_retry(271, CoverRole.SHADE, StalledOpenRetry(min_openness=0.9, delay=60.0))
 hub.set_stalled_open_retry(271, CoverRole.SHADE, None)  # off; ends a retry in progress
 ```
@@ -153,13 +153,15 @@ The hub does not keep which covers it is on for across restarts: that is the hos
   counted, nor a move the hub saw end without an event; a stop from the PowerView app near the
   top cannot be told from a motor backing off.
 - **What it does.** Once the shade has sent no event for `Timing.retry_settle` (3 s), as a motor
-  backing off still reports where it goes, it lowers the cover to `lower_to` (0.8) and raises it
-  in three steps, moving only that cover's rail. The steps are worked out from where the motor
-  backed off to: two thirds of the way from there to the top, five sixths, and fully open. A step
-  counts once the shade is quiet again; after each step that held, it waits `delay` (300 s) for
-  the fabric to settle. A step the motor backs off from starts a new round, from where it backed
-  off to, up to `rounds` (3) in all; a cover that backed off below `lower_to` is not lowered.
-  Each start, step, back-off and end is logged as a warning.
+  backing off still reports where it goes, it lowers the cover below the highest point it
+  reached by `back_offs` (4) times as far as the motor backed off, each counted half a step
+  (0.005) more, as positions come rounded: a cover that reached the top and backed off 0.05 is
+  lowered to 0.78. It then raises it in three steps, moving only that cover's rail, worked out
+  from where the motor backed off to: two thirds of the way from there to the top, five sixths,
+  and fully open. A step counts once the shade is quiet again; after each step that held, it
+  waits `delay` (300 s) for the fabric to settle. A step the motor backs off from starts a new
+  round, from where it backed off to, up to `rounds` (3) in all. Each start, step, back-off and
+  end is logged as a warning.
 - **What it says.** `ShadeStalled(shade_id=, role=, openness=, outcome=)` once as it starts
   (`STARTED`, where the cover stopped), and once as it ends, where the cover ended: `OPENED`,
   fully open; `GAVE_UP`, the motor backed off from a step in every round, or a move did not stop

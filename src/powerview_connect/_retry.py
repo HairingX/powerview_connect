@@ -14,8 +14,9 @@ from ._motion import STEP
 class StalledOpenRetry:
     """How a cover sent fully open whose motor backed off short of the top is opened after all.
 
-    A cover sent fully open that ends at `min_openness` or above, short of the top, is lowered to
-    `lower_to` and raised in three steps, worked out from where the motor backed off to: two
+    A cover sent fully open that ends at `min_openness` or above, short of the top, is lowered
+    `back_offs` times as far as the motor backed off below the highest point it reached, and
+    raised in three steps, worked out from where the motor backed off to: two
     thirds of the way from there to the top, five sixths, and fully open, with `delay` seconds
     after each step that held. A step the motor backs off from
     starts a new round, up to `rounds` in all.
@@ -23,9 +24,10 @@ class StalledOpenRetry:
 
     min_openness: float = 0.8
     """The lowest openness counted as backed off; a stop below it is taken as meant."""
-    lower_to: float = 0.8
-    """Where the cover is lowered to first: a motor that backed off was seen to take an opening
-    from 0.81, and to refuse one from 0.85 and above."""
+    back_offs: int = 4
+    """How many times as far as the motor backed off the cover is lowered first: a motor that
+    backed off 0.05 from the top was seen to take an opening from 0.81, and to refuse one from
+    0.85 and above."""
     rounds: int = 3
     """How many rounds are started at most."""
     delay: float = 300.0
@@ -35,13 +37,13 @@ class StalledOpenRetry:
         """Refuse settings that cannot work.
 
         Raises:
-            ValueError: `min_openness` or `lower_to` is outside 0.0 to below 1.0, `rounds` is
+            ValueError: `min_openness` is outside 0.0 to below 1.0, `back_offs` or `rounds` is
                 below 1, or `delay` is negative.
         """
-        if not (0.0 <= self.min_openness < 1.0 and 0.0 <= self.lower_to < 1.0):
-            raise ValueError(f"min_openness and lower_to run from 0.0 to below 1.0: {self}")
-        if self.rounds < 1 or self.delay < 0:
-            raise ValueError(f"rounds starts at 1 and delay at 0: {self}")
+        if not 0.0 <= self.min_openness < 1.0:
+            raise ValueError(f"min_openness runs from 0.0 to below 1.0: {self}")
+        if min(self.back_offs, self.rounds) < 1 or self.delay < 0:
+            raise ValueError(f"back_offs and rounds start at 1, delay at 0: {self}")
 
 
 class RetryOutcome(StrEnum):
@@ -81,6 +83,17 @@ def stalled_openness(
         return None
     return reached
 
+
+
+ROUNDING = 0.005
+"""Half the 0.01 steps positions are reported in: how far a measured back-off may be short."""
+
+
+def lowered_to(highest: float, backed_off_to: float, back_offs: int) -> float:
+    """Where a cover that reached `highest` and backed off to `backed_off_to` is lowered to:
+    `back_offs` times the back-off, each counted half a step more, below `highest`."""
+    back_off = max(0.0, highest - backed_off_to)
+    return round(max(0.0, highest - back_offs * (back_off + ROUNDING)), 2)
 
 
 STEPS = (2 / 3, 5 / 6, 1.0)
