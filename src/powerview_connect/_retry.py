@@ -1,7 +1,7 @@
 """Whether a cover stopped short of fully open, and the steps that open it the rest of the way."""
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -10,7 +10,7 @@ from ._model import Rail
 from ._motion import STEP
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class StalledOpenRetry:
     """How a shade whose opening stalled is opened the rest of the way.
 
@@ -49,34 +49,30 @@ class RetryOutcome(StrEnum):
     """Something else moved or stopped the shade, removed it, or turned the retry off."""
 
 
-def stalled_cover(
-    shade_covers: Sequence[CoverSpec],
+def stalled_openness(
+    cover: CoverSpec,
     target: Mapping[Rail, float],
     final: Mapping[Rail, float],
     settings: StalledOpenRetry,
-) -> tuple[CoverSpec, float] | None:
-    """The cover that was sent fully open but stopped short, and how far it is open.
+) -> float | None:
+    """How far `cover` is open where it was sent fully open but stopped short; None where it
+    did not stall.
 
     Args:
         target: the positions the move was sent to.
         final: the positions it stopped at.
-
-    Returns:
-        None where no cover stalled.
     """
-    for cover in shade_covers:
-        if not cover.retryable:
-            continue
-        aimed, reached = cover.openness(target), cover.openness(final)
-        if aimed is None or reached is None or aimed < 1.0 - STEP:
-            continue
-        if not settings.min_openness <= reached < 1.0 - STEP:
-            continue
-        # The shade's firmware stops a bottom rail where it meets a lowered top rail.
-        if cover.role is CoverRole.BOTTOM and final.get(Rail.SECONDARY, 0.0) > STEP:
-            continue
-        return cover, reached
-    return None
+    if not cover.retryable:
+        return None
+    aimed, reached = cover.openness(target), cover.openness(final)
+    if aimed is None or reached is None or aimed < 1.0 - STEP:
+        return None
+    if not settings.min_openness <= reached < 1.0 - STEP:
+        return None
+    # The shade's firmware stops a bottom rail where it meets a lowered top rail.
+    if cover.role is CoverRole.BOTTOM and final.get(Rail.SECONDARY, 0.0) > STEP:
+        return None
+    return reached
 
 
 def retry_steps(start: float, steps: int) -> list[float]:

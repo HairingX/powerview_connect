@@ -1,9 +1,11 @@
 """Telling a cover whose opening stalled short of fully open, and the steps that retry it."""
+from typing import Any, cast
+
 import pytest
 
 from powerview_connect import Capabilities, CoverRole, CoverSpec, Rail, Shade, StalledOpenRetry
 from powerview_connect._covers import covers
-from powerview_connect._retry import retry_steps, stalled_cover
+from powerview_connect._retry import retry_steps, stalled_openness
 
 P, S, T = Rail.PRIMARY, Rail.SECONDARY, Rail.TILT
 SETTINGS = StalledOpenRetry()
@@ -17,6 +19,17 @@ def _covers(capabilities: int, shade_type: int | None = 6) -> tuple[CoverSpec, .
 
 CURTAIN = _covers(Capabilities.BOTTOM_UP)
 TDBU = _covers(Capabilities.TOP_DOWN_BOTTOM_UP, 8)
+
+
+def stalled_cover(
+    shade_covers: tuple[CoverSpec, ...], target: dict[Rail, float], final: dict[Rail, float],
+    settings: StalledOpenRetry,
+) -> tuple[CoverSpec, float] | None:
+    """The first of `shade_covers` that stalled, and how far it is open."""
+    for cover in shade_covers:
+        if (openness := stalled_openness(cover, target, final, settings)) is not None:
+            return cover, openness
+    return None
 
 
 def test_a_curtain_sent_fully_open_that_stopped_short_is_stalled() -> None:
@@ -80,8 +93,8 @@ def test_retry_settings_that_cannot_work_are_refused(
     min_openness: float, steps: int, delay: float
 ) -> None:
     with pytest.raises(ValueError):
-        StalledOpenRetry(min_openness, steps, delay)
-    assert StalledOpenRetry(0.0, 1, 0.0).steps == 1
+        StalledOpenRetry(min_openness=min_openness, steps=steps, delay=delay)
+    assert StalledOpenRetry(min_openness=0.0, steps=1, delay=0.0).steps == 1
     assert StalledOpenRetry().delay == 90.0
 
 
@@ -95,3 +108,8 @@ def test_only_pleated_covers_that_open_upwards_are_retryable() -> None:
 @pytest.mark.parametrize("shade_type", [1, 42, None])
 def test_a_shade_whose_fabric_does_not_gather_is_not_retryable(shade_type: int | None) -> None:
     assert not _covers(Capabilities.BOTTOM_UP, shade_type)[0].retryable
+
+
+def test_retry_settings_are_given_by_name() -> None:
+    with pytest.raises(TypeError):
+        cast(Any, StalledOpenRetry)(0.8)

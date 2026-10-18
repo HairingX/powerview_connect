@@ -129,21 +129,21 @@ command. See Errors for what a command raises.
 A pleated or cellular shade sent fully open sometimes stalls a little short: its fabric gathers
 at the top and the motor meets too much resistance. Taken the rest of the way in small steps,
 with time between them for the fabric to settle, it opens fully. The hub does that for the
-shades it is turned on for, whoever started the move: this hub, the PowerView app, a voice
+covers it is turned on for, whoever started the move: this hub, the PowerView app, a voice
 assistant or a scene.
 
 ```python
-hub.set_stalled_open_retry(271, StalledOpenRetry())    # off for every shade until turned on
-hub.stalled_open_retry(271)                            # StalledOpenRetry(0.8, 3, 90.0)
-hub.set_stalled_open_retry(271, StalledOpenRetry(min_openness=0.9, delay=60.0))
-hub.set_stalled_open_retry(271, None)                  # off; ends a retry in progress
+hub.set_stalled_open_retry(271, CoverRole.SHADE, StalledOpenRetry())  # off until turned on
+hub.stalled_open_retry(271, CoverRole.SHADE)     # StalledOpenRetry(min_openness=0.8, steps=3, delay=90.0)
+hub.set_stalled_open_retry(271, CoverRole.SHADE, StalledOpenRetry(min_openness=0.9, delay=60.0))
+hub.set_stalled_open_retry(271, CoverRole.SHADE, None)  # off; ends a retry in progress
 ```
 
-`CoverSpec.retryable` says which cover of a shade can be retried: one that opens upwards (a
-`SHADE` cover, or the `BOTTOM` rail of a top-down/bottom-up shade) of a pleated or cellular
-shade, whose fabric gathers as it opens. A shade without one is refused with `ValueError`, and a
-read-only hub refuses with `ReadOnlyError`. The hub does not keep which shades it is on for
-across restarts: that is the host's to keep.
+It is set per cover, by the shade's id and the cover's `role`. `CoverSpec.retryable` says which
+cover of a shade can be retried: one that opens upwards (a `SHADE` cover, or the `BOTTOM` rail of
+a top-down/bottom-up shade) of a pleated or cellular shade, whose fabric gathers as it opens.
+Any other cover is refused with `ValueError`, and a read-only hub refuses with `ReadOnlyError`.
+The hub does not keep which covers it is on for across restarts: that is the host's to keep.
 
 - **What counts.** A `motion-stopped` event for that cover, whose move aimed fully open and which
   stopped from `min_openness` (0.8) to just short of open; for a bottom rail, only while the top
@@ -153,14 +153,15 @@ across restarts: that is the host's to keep.
 - **What it does.** It opens the cover the rest of the way in `steps` (3) even steps, moving only
   that cover's rail; after each step has stopped it waits `delay` (90 s) for the fabric to
   settle, and checks that the cover rose.
-- **What it says.** `ShadeStalled(shade_id, role, openness, outcome)` once as it starts
+- **What it says.** `ShadeStalled(shade_id=, role=, openness=, outcome=)` once as it starts
   (`STARTED`, where the cover stopped), and once as it ends, where the cover ended: `OPENED`,
-  fully open; `GAVE_UP`, a step did not raise it, did not stop within `Timing.min_timeout`, or
+  fully open; `GAVE_UP`, a step did not raise it, did not stop within `Timing.retry_step_timeout` (90 s), or
   could not be sent; or `INTERRUPTED`, a command of yours, a move or stop from elsewhere, the
   shade going offline or leaving the home, turning it off, or `run` ending.
 
 It works only while `run` runs, and each retry is a task of `run`'s own, so nothing outlives it.
-Each stalled opening is retried once: the steps' own stops are not looked at again.
+Each stalled opening is retried once, one cover of a shade at a time: the steps' own stops are
+not looked at again.
 
 ### Timing, clock and logging
 

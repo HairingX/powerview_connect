@@ -28,7 +28,7 @@ from powerview_connect.testing import ManualClock, SimulatedGateway
 
 P, S, T = Rail.PRIMARY, Rail.SECONDARY, Rail.TILT
 CURTAIN, TDBU = 271, 154
-TIMING = Timing(stream_idle_timeout=30.0, min_timeout=90.0)
+TIMING = Timing(stream_idle_timeout=30.0, min_timeout=90.0, retry_step_timeout=40.0)
 RETRY = StalledOpenRetry(min_openness=0.8, steps=3, delay=10.0)
 
 
@@ -75,8 +75,8 @@ async def hub(
     _furnish(gateway)
     found = PowerViewHub(session, gateway.host, timing=TIMING, clock=clock)
     task = await _running(found)
-    found.set_stalled_open_retry(CURTAIN, RETRY)
-    found.set_stalled_open_retry(TDBU, RETRY)
+    found.set_stalled_open_retry(CURTAIN, CoverRole.SHADE, RETRY)
+    found.set_stalled_open_retry(TDBU, CoverRole.BOTTOM, RETRY)
     yield found
     await _stop(task)
 
@@ -131,12 +131,14 @@ async def test_a_curtain_the_app_opened_that_stopped_short_is_raised_in_steps(
 ) -> None:
     await _stalled_at(app, gateway, hub, CURTAIN, 0.9)
     await until(lambda: len(stalls) == 1)
-    assert stalls[0] == ShadeStalled(CURTAIN, CoverRole.SHADE, 0.9, RetryOutcome.STARTED)
+    assert stalls[0] == ShadeStalled(shade_id=CURTAIN, role=CoverRole.SHADE,
+                                     openness=0.9, outcome=RetryOutcome.STARTED)
     for moves in (2, 3, 4):
         await _step(hub, gateway, moves)
         await _pause(clock)
     await until(lambda: len(stalls) == 2)
-    assert stalls[1] == ShadeStalled(CURTAIN, CoverRole.SHADE, 1.0, RetryOutcome.OPENED)
+    assert stalls[1] == ShadeStalled(shade_id=CURTAIN, role=CoverRole.SHADE,
+                                     openness=1.0, outcome=RetryOutcome.OPENED)
     assert _moves(gateway)[1:] == [{"positions": {"primary": value}} for value in (0.93, 0.97, 1.0)]
     assert gateway.requests[-1].query == {"ids": str(CURTAIN)}
 
@@ -163,7 +165,8 @@ async def test_a_step_that_does_not_raise_the_curtain_gives_up_with_no_more_step
     await _step(hub, gateway, 2, at=0.9)
     await _pause(clock)
     await until(lambda: len(stalls) == 2)
-    assert stalls[1] == ShadeStalled(CURTAIN, CoverRole.SHADE, 0.9, RetryOutcome.GAVE_UP)
+    assert stalls[1] == ShadeStalled(shade_id=CURTAIN, role=CoverRole.SHADE,
+                                     openness=0.9, outcome=RetryOutcome.GAVE_UP)
     await _pause(clock, 30.0)
     assert len(_moves(gateway)) == 2
 
@@ -175,7 +178,7 @@ async def test_a_step_without_motion_stopped_in_time_gives_up(
     await _stalled_at(app, gateway, hub, CURTAIN, 0.9)
     await until(lambda: len(_moves(gateway)) == 2)
     gateway.move(CURTAIN, {P: 0.92})
-    await _pause(clock, 95.0)
+    await _pause(clock, 45.0)
     await until(lambda: len(stalls) == 2)
     assert stalls[1].outcome is RetryOutcome.GAVE_UP
     assert len(_moves(gateway)) == 2
@@ -193,7 +196,8 @@ async def test_the_retry_own_stops_do_not_start_another_retry(
     await _step(hub, gateway, 4, at=0.97)
     await _pause(clock)
     await until(lambda: len(stalls) == 2)
-    assert stalls[1] == ShadeStalled(CURTAIN, CoverRole.SHADE, 0.97, RetryOutcome.GAVE_UP)
+    assert stalls[1] == ShadeStalled(shade_id=CURTAIN, role=CoverRole.SHADE,
+                                     openness=0.97, outcome=RetryOutcome.GAVE_UP)
     gateway.emit(EventKind.MOTION_STOPPED, CURTAIN)
     await _pause(clock, 30.0)
     assert len(stalls) == 2 and len(_moves(gateway)) == 4
@@ -269,7 +273,8 @@ async def test_a_shade_removed_from_the_home_during_a_retry_interrupts_it(
     await hub.refresh()
     await hub.refresh()
     await until(lambda: len(stalls) == 2)
-    assert stalls[1] == ShadeStalled(CURTAIN, CoverRole.SHADE, None, RetryOutcome.INTERRUPTED)
+    assert stalls[1] == ShadeStalled(shade_id=CURTAIN, role=CoverRole.SHADE,
+                                     openness=None, outcome=RetryOutcome.INTERRUPTED)
 
 
 async def test_a_step_the_gateway_refuses_gives_up(
@@ -362,7 +367,7 @@ async def test_retry_is_off_for_every_shade_until_turned_on(
     _furnish(gateway)
     hub = PowerViewHub(session, gateway.host, timing=TIMING, clock=clock)
     task = await _running(hub)
-    assert hub.stalled_open_retry(CURTAIN) is None
+    assert hub.stalled_open_retry(CURTAIN, CoverRole.SHADE) is None
     changes = await _hub_stalls(hub, gateway, app)
     assert not any(isinstance(change, ShadeStalled) for change in changes)
     assert len(_moves(gateway)) == 1
@@ -376,14 +381,33 @@ async def test_a_read_only_hub_refuses_to_raise_a_curtain(
     hub = PowerViewHub(session, gateway.host, timing=TIMING, clock=clock, read_only=True)
     await hub.load()
     with pytest.raises(ReadOnlyError):
-        hub.set_stalled_open_retry(CURTAIN, RETRY)
-    hub.set_stalled_open_retry(CURTAIN, None)
-    assert hub.stalled_open_retry(CURTAIN) is None
+        hub.set_stalled_open_retry(CURTAIN, CoverRole.SHADE, RETRY)
+    hub.set_stalled_open_retry(CURTAIN, CoverRole.SHADE, None)
+    assert hub.stalled_open_retry(CURTAIN, CoverRole.SHADE) is None
 
 
 async def test_turning_retry_on_for_a_shade_not_known_is_refused(hub: PowerViewHub) -> None:
     with pytest.raises(KeyError):
-        hub.set_stalled_open_retry(1, RETRY)
+        hub.set_stalled_open_retry(1, CoverRole.SHADE, RETRY)
+
+
+async def test_the_top_rail_of_a_top_down_bottom_up_shade_cannot_be_retried(
+    hub: PowerViewHub,
+) -> None:
+    with pytest.raises(ValueError, match="top"):
+        hub.set_stalled_open_retry(TDBU, CoverRole.TOP, RETRY)
+
+
+async def test_turning_another_cover_retry_off_leaves_one_in_progress_running(
+    hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient,
+    stalls: list[ShadeStalled],
+) -> None:
+    await _stalled_at(app, gateway, hub, TDBU, 0.9)
+    await until(lambda: len(_moves(gateway)) == 2)
+    hub.set_stalled_open_retry(TDBU, CoverRole.TOP, None)
+    await asyncio.sleep(0.05)
+    assert [stall.outcome for stall in stalls] == [RetryOutcome.STARTED]
+    assert hub.stalled_open_retry(TDBU, CoverRole.BOTTOM) == RETRY
 
 
 async def test_a_shade_whose_fabric_does_not_gather_cannot_be_retried(
@@ -394,7 +418,7 @@ async def test_a_shade_whose_fabric_does_not_gather_cannot_be_retried(
     hub = PowerViewHub(session, gateway.host)
     await hub.load()
     with pytest.raises(ValueError, match="shade 5"):
-        hub.set_stalled_open_retry(5, RETRY)
+        hub.set_stalled_open_retry(5, CoverRole.SHADE, RETRY)
 
 
 async def test_turning_retry_off_ends_one_in_progress_and_raises_no_more(
@@ -403,7 +427,7 @@ async def test_turning_retry_off_ends_one_in_progress_and_raises_no_more(
 ) -> None:
     await _stalled_at(app, gateway, hub, CURTAIN, 0.9)
     await until(lambda: len(_moves(gateway)) == 2)
-    hub.set_stalled_open_retry(CURTAIN, None)
+    hub.set_stalled_open_retry(CURTAIN, CoverRole.SHADE, None)
     await until(lambda: len(stalls) == 2)
     assert stalls[1].outcome is RetryOutcome.INTERRUPTED
     await _stalled_at(app, gateway, hub, CURTAIN, 0.85)
@@ -415,8 +439,8 @@ async def test_settings_changed_while_running_apply_to_the_next_stall(
     hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, clock: ManualClock,
     stalls: list[ShadeStalled],
 ) -> None:
-    hub.set_stalled_open_retry(CURTAIN, StalledOpenRetry(min_openness=0.95, steps=1, delay=0.0))
-    assert hub.stalled_open_retry(CURTAIN) == StalledOpenRetry(0.95, 1, 0.0)
+    hub.set_stalled_open_retry(CURTAIN, CoverRole.SHADE, StalledOpenRetry(min_openness=0.95, steps=1, delay=0.0))
+    assert hub.stalled_open_retry(CURTAIN, CoverRole.SHADE) == StalledOpenRetry(min_openness=0.95, steps=1, delay=0.0)
     await _stalled_at(app, gateway, hub, CURTAIN, 0.9)
     await asyncio.sleep(0.05)
     assert stalls == []
@@ -434,7 +458,7 @@ async def test_a_shade_removed_from_the_home_is_no_longer_raised(
     gateway.remove_shade(CURTAIN)
     await hub.refresh()
     await hub.refresh()
-    assert hub.stalled_open_retry(CURTAIN) is None
+    assert hub.stalled_open_retry(CURTAIN, CoverRole.SHADE) is None
 
 
 async def test_nothing_is_raised_while_run_does_not_run(
@@ -443,7 +467,7 @@ async def test_nothing_is_raised_while_run_does_not_run(
     _furnish(gateway)
     hub = PowerViewHub(session, gateway.host, timing=TIMING, clock=clock)
     task = await _running(hub)
-    hub.set_stalled_open_retry(CURTAIN, RETRY)
+    hub.set_stalled_open_retry(CURTAIN, CoverRole.SHADE, RETRY)
     await _stop(task)
     changes: list[Change] = []
     hub.subscribe(changes.append)
@@ -462,7 +486,7 @@ async def test_a_retry_ends_interrupted_when_run_is_cancelled(
     _furnish(gateway)
     hub = PowerViewHub(session, gateway.host, timing=TIMING, clock=clock)
     task = await _running(hub)
-    hub.set_stalled_open_retry(CURTAIN, RETRY)
+    hub.set_stalled_open_retry(CURTAIN, CoverRole.SHADE, RETRY)
     changes: list[Change] = []
     hub.subscribe(changes.append)
     await _stalled_at(app, gateway, hub, CURTAIN, 0.9)

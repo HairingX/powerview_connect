@@ -32,7 +32,7 @@ from ._model import (
     ShadeEvent,
 )
 from ._motion import STEP, ShadeTracker
-from ._retry import RetryOutcome, StalledOpenRetry, retry_steps, stalled_cover
+from ._retry import RetryOutcome, StalledOpenRetry, retry_steps, stalled_openness
 
 type Listener[T] = Callable[[T], None]
 type Unsubscribe = Callable[[], None]
@@ -63,6 +63,8 @@ class Timing:
     settle: float = 1.5
     start_grace: float = 25.0
     min_timeout: float = 90.0
+    retry_step_timeout: float = 90.0
+    """Longest a step of a retried opening may take to stop."""
 
     def __post_init__(self) -> None:
         """Refuse values the hub cannot work with.
@@ -72,7 +74,7 @@ class Timing:
                 stream, or fewer than one read or confirmation is allowed.
         """
         intervals = (self.poll_interval, self.refresh_interval, self.gateway_interval,
-                     self.request_timeout, self.stream_idle_timeout)
+                     self.request_timeout, self.stream_idle_timeout, self.retry_step_timeout)
         if any(interval <= 0 for interval in intervals):
             raise ValueError(f"intervals and timeouts must be positive: {self}")
         if not self.reconnect_backoff or any(wait < 0 for wait in self.reconnect_backoff):
@@ -185,7 +187,7 @@ class HomeChanged:
     diff: HomeDiff
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class ShadeStalled:
     """A cover's opening stalled short of fully open, and the hub retries it.
 
@@ -285,8 +287,8 @@ class PowerViewHub:
         self._connection = Connection.CONNECTING
         self._listeners = _Listeners()
         self._task: asyncio.Task[None] | None = None
-        self._retries: dict[int, StalledOpenRetry] = {}
-        """How each shade a stalled opening is retried for retries it."""
+        self._retries: dict[tuple[int, CoverRole], StalledOpenRetry] = {}
+        """How a stalled opening of each cover it is retried for is retried."""
         self._running: dict[int, _Running] = {}
         self._group: asyncio.TaskGroup | None = None
 
@@ -354,34 +356,38 @@ class PowerViewHub:
         """Every gateway's state, by serial number."""
         return dict(self._gateway_states)
 
-    def stalled_open_retry(self, shade_id: int) -> StalledOpenRetry | None:
-        """How a stalled opening of the shade is retried; None while it is not."""
-        return self._retries.get(shade_id)
+    def stalled_open_retry(self, shade_id: int, role: CoverRole) -> StalledOpenRetry | None:
+        """How a stalled opening of the shade's cover `role` is retried; None while it is not."""
+        return self._retries.get((shade_id, role))
 
-    def set_stalled_open_retry(self, shade_id: int, retry: StalledOpenRetry | None) -> None:
-        """Retry an opening of the shade that stalls short of fully open, as `retry` says; None
-        stops doing so.
+    def set_stalled_open_retry(
+        self, shade_id: int, role: CoverRole, retry: StalledOpenRetry | None
+    ) -> None:
+        """Retry an opening of the shade's cover `role` that stalls short of fully open, as
+        `retry` says; None stops doing so.
 
-        Off for every shade until turned on. It works while `run` runs, for the shade's
-        `retryable` cover; new settings apply from the next stall, and None ends a retry of the
-        shade in progress.
+        Off for every cover until turned on. It works while `run` runs; new settings apply from
+        the next stall, and None ends a retry of the cover in progress.
 
         Raises:
             KeyError: the home has no such shade.
-            ValueError: the shade has no cover that can be retried.
+            ValueError: the shade has no cover `role` whose opening can be retried.
             ReadOnlyError: it is turned on for a read-only hub, which sends no commands.
         """
         if shade_id not in self._trackers:
             raise KeyError(shade_id)
         if retry is None:
-            self._retries.pop(shade_id, None)
-            self._interrupt(shade_id)
+            self._retries.pop((shade_id, role), None)
+            running = self._running.get(shade_id)
+            if running is not None and running.cover.role is role:
+                self._interrupt(shade_id)
             return
-        if not any(cover.retryable for cover in covers(self._shades[shade_id])):
-            raise ValueError(f"shade {shade_id} has no cover whose opening can be retried")
+        if not any(cover.retryable and cover.role is role
+                   for cover in covers(self._shades[shade_id])):
+            raise ValueError(f"shade {shade_id} has no {role} cover whose opening can be retried")
         if self.read_only:
             raise ReadOnlyError(f"retrying shade {shade_id} refused: the hub is read-only")
-        self._retries[shade_id] = retry
+        self._retries[(shade_id, role)] = retry
 
     def gateway_of(self, shade_id: int) -> Gateway | None:
         """The gateway that serves a shade, the one the hub reaches when no gateway says so."""
@@ -476,7 +482,8 @@ class PowerViewHub:
 
     def _emit_stall(self, shade_id: int, cover: CoverSpec, openness: float | None,
                     outcome: RetryOutcome) -> None:
-        self._emit(ShadeStalled(shade_id, cover.role, openness, outcome))
+        self._emit(ShadeStalled(shade_id=shade_id, role=cover.role, openness=openness,
+                                outcome=outcome))
 
     # -------------------------------------------------------------------- state
 
@@ -655,7 +662,8 @@ class PowerViewHub:
                         scenes_changed, gateways_added, gateways_removed, gateways_changed)
         self._home = home
         for shade_id in removed:
-            self._retries.pop(shade_id, None)
+            for key in [key for key in self._retries if key[0] == shade_id]:
+                del self._retries[key]
             self._interrupt(shade_id)
             del self._shades[shade_id], self._trackers[shade_id], self._states[shade_id]
             self._moving.discard(shade_id)
@@ -829,22 +837,26 @@ class PowerViewHub:
     # ----------------------------------------------------------------- stalls
 
     def _detect_stall(self, shade_id: int) -> None:
-        settings, group = self._retries.get(shade_id), self._group
-        if settings is None or group is None:
+        group = self._group
+        if group is None or not any(key[0] == shade_id for key in self._retries):
             return
         tracker = self._trackers[shade_id]
         final = {rail: value for rail, value in tracker.current.items() if value is not None}
-        found = stalled_cover(covers(self._shades[shade_id]), tracker.last_target, final, settings)
-        if found is None:
+        for cover in covers(self._shades[shade_id]):
+            settings = self._retries.get((shade_id, cover.role))
+            if settings is None:
+                continue
+            openness = stalled_openness(cover, tracker.last_target, final, settings)
+            if openness is None:
+                continue
+            # One running per stalled move: its own steps' stops are not looked at again.
+            tracker.last_target = {}
+            self._running[shade_id] = running = _Running(cover)
+            self._log.info("Shade %s (%s) stalled at %.2f of fully open; retrying its %s cover "
+                           "in steps", shade_id, self._shades[shade_id].name, openness, cover.role)
+            self._emit_stall(shade_id, cover, openness, RetryOutcome.STARTED)
+            group.create_task(self._retry(shade_id, running, openness, settings))
             return
-        cover, openness = found
-        # One running per stalled move: its own steps' stops are not looked at again.
-        tracker.last_target = {}
-        self._running[shade_id] = running = _Running(cover)
-        self._log.info("Shade %s (%s) stalled at %.2f of fully open; retrying it in steps",
-                       shade_id, self._shades[shade_id].name, openness)
-        self._emit_stall(shade_id, cover, openness, RetryOutcome.STARTED)
-        group.create_task(self._retry(shade_id, running, openness, settings))
 
     def _interrupt(self, shade_id: int) -> None:
         running = self._running.get(shade_id)
@@ -892,9 +904,9 @@ class PowerViewHub:
             # Set before sending: the step's motion-started can arrive before the answer.
             running.expected = openness
             await self._send_move(shade_id, positions)
-            if not await self._wait(running, self._timing.min_timeout):
+            if not await self._wait(running, self._timing.retry_step_timeout):
                 self._log.debug("Shade %s did not stop within %.0f s", shade_id,
-                                self._timing.min_timeout)
+                                self._timing.retry_step_timeout)
                 return RetryOutcome.GAVE_UP
             running.expected = None
             running.wake.clear()
