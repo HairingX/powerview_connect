@@ -427,8 +427,8 @@ class SimulatedGateway:
         self.emit(EventKind.MOTION_STOPPED, shade_id)
 
     def drift(self, shade_id: int, positions: Mapping[Rail, float]) -> None:
-        """Move a shade without a motion-started, as one sliding down from the top or a motor
-        backing off does: a shade-online event says where it went, and a motion-stopped ends it."""
+        """Move a shade without a motion-started, as a motor backing off by itself does: a
+        shade-online event says where it went, and a motion-stopped ends it."""
         shade = self.shades[shade_id]
         shade.target = None
         shade.positions.update(positions)

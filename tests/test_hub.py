@@ -383,7 +383,8 @@ async def test_events_say_when_a_shade_goes_offline_and_comes_back(
 async def test_a_shade_online_event_says_where_a_shade_standing_still_is(
     hub: PowerViewHub, gateway: SimulatedGateway
 ) -> None:
-    """A shade sliding down by itself reports where it is in these, and in no motion-started."""
+    """A motor backing off by itself reports where the shade is in these, and in no
+    motion-started."""
     gateway.shades[PATIO].positions[P] = 0.95
     gateway.set_online(PATIO, True)
     await until(lambda: hub.shade(PATIO).positions[P] == 0.95)
