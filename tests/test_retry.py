@@ -88,18 +88,17 @@ def test_steps_that_would_not_move_the_cover_are_left_out() -> None:
 
 
 @pytest.mark.parametrize("wrong", [
-    {"min_openness": -0.1}, {"min_openness": 1.0}, {"wait": -1.0}, {"attempts": 0},
+    {"min_openness": -0.1}, {"min_openness": 1.0}, {"lower_to": -0.1}, {"lower_to": 1.0},
     {"rounds": 0}, {"delay": -1.0}])
 def test_retry_settings_that_cannot_work_are_refused(wrong: dict[str, Any]) -> None:
     with pytest.raises(ValueError):
         StalledOpenRetry(**wrong)
 
 
-def test_a_retry_waits_five_and_a_half_minutes_and_tries_five_times_in_three_rounds() -> None:
-    assert StalledOpenRetry() == StalledOpenRetry(min_openness=0.8, wait=330.0, attempts=5,
-                                                  rounds=3, delay=300.0)
-    assert StalledOpenRetry(min_openness=0.0, wait=0.0, attempts=1, rounds=1,
-                            delay=0.0).rounds == 1
+def test_a_retry_lowers_to_eighty_percent_in_up_to_three_rounds_unless_told_otherwise() -> None:
+    assert StalledOpenRetry() == StalledOpenRetry(min_openness=0.8, lower_to=0.8, rounds=3,
+                                                  delay=300.0)
+    assert StalledOpenRetry(min_openness=0.0, lower_to=0.0, rounds=1, delay=0.0).rounds == 1
 
 
 def test_only_pleated_covers_that_open_upwards_are_retryable() -> None:

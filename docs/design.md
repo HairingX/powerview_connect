@@ -96,18 +96,17 @@ it stopped, whoever started it, the hub can tell such a stop and retry it so.
   open: lower down, a stop is taken as meant, as from the app's stop button. Nearer the top, a
   stop from the app cannot be told from a stall; a shade often stopped there by hand is left
   with the retry off.
-- **Wait, then raise in steps.** A step sent within seconds of the motor backing off was refused,
-  so the retry first waits `wait`, 330 s by default. The rest of the way to the top is then split
-  into steps of two thirds, five sixths and all of the way, as the motor was seen to back off on
-  the last part of the way. Where a step ended counts once the shade has sent no event for
-  `Timing.retry_settle`: a motor backing off reports where it is every 2 s, so a move sent while
-  it still backs off would be lost in it. The motor was seen to take the first step after one or
-  two refusals, so the first step is sent again at once, up to `attempts` times. After each step
-  that held, the retry waits `delay` for the fabric to settle, whatever the shade sends
-  meanwhile. A later step the motor backs off from starts a new round, waiting `wait` again, up to
-  `rounds` in all. A motor that backs off sends no `motion-started`, so each move waits for the
-  shade's next `motion-stopped` alone. Each start, step, back-off and end is logged as a warning,
-  as the user tunes the timing from the log.
+- **Lower, then raise in steps.** A motor that backed off was seen to refuse an opening from 0.85
+  and above, at once or after minutes, and to take one from 0.81. So the retry lowers the cover to
+  `lower_to`, 0.8 by default, first. The steps up are worked out from where the motor backed off
+  to, as that is as far as the fabric was gathered: two thirds of the way from there to the top,
+  five sixths, and all of the way. Where the motor backed off to, and where a step ended, counts
+  once the shade has sent no event for `Timing.retry_settle`: a motor backing off reports where it
+  is every 2 s, so a move sent while it still backs off would be lost in it. After each step that
+  held, the retry waits `delay` for the fabric to settle, whatever the shade sends meanwhile. A
+  step the motor backs off from starts a new round, up to `rounds` in all. A motor that backs off
+  sends no `motion-started`, so each move waits for the shade's next `motion-stopped` alone. Each
+  start, step, back-off and end is logged as a warning, as the user tunes the retry from the log.
 - **One retry per stall, one per shade**, as each move is a move of the shade. It is a task in
   `run`'s TaskGroup, so it ends with `run`; an exception in it is logged and ends it as `GAVE_UP`,
   never the TaskGroup. Each move is of the cover's rail alone, sent as `move` sends it but not
@@ -119,8 +118,8 @@ it stopped, whoever started it, the hub can tell such a stop and retry it so.
   `INTERRUPTED`. A `motion-started` without a target for the rail cannot be told from the
   retry's own, so it does not.
 - **Time** is the hub's `Clock`: the wait for each move's stop, up to `Timing.retry_move_timeout`
-  and apart from the tracker's own limits, the `wait` before each round, the quiet after each
-  step, and the `delay` after each step that held, 300 s by default, as gathered fabric takes
+  and apart from the tracker's own limits, the quiet after each move, and the `delay` after each
+  step that held, 300 s by default, as gathered fabric takes
   minutes to settle.
 
 ## Connection
