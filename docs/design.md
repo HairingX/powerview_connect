@@ -62,11 +62,15 @@ A fabric gathering at the top can stop a curtain sent fully open a little short;
 let it fold. As the event stream says where every move aims and where it stopped, whoever
 started it, the hub can tell such a stop and raise the cover the rest of the way.
 
+- **Opt-in, per shade.** It does something only for a shade it is turned on for, as only the
+  user knows which curtain gathers; the settings are the hub's, and can change while it runs.
+  Turning it off for a shade interrupts a recovery of it. Which shades are on is not kept: a
+  host that persists settings keeps it.
 - **Only on a `motion-stopped` event.** The tracker can end a move itself while the motor still
   runs, when nothing changed for `stall` seconds, and leave a stale position: that must not look
   like a stall. It keeps the last move's targets once the move ends, until the next one begins,
   and forgets them on a stop sent, as a stopped move did not aim where it ended.
-- **Only covers that open upwards:** `SHADE` and `BOTTOM`. The `TOP` rail opens downwards and
+- **Only covers that open upwards** (`CoverSpec.recoverable`): `SHADE` and `BOTTOM`. The `TOP` rail opens downwards and
   the shade's firmware stops it where it meets the bottom rail; a `BOTTOM` rail likewise stops
   at a lowered top rail, so it counts only while the top rail is at the top. Front, rear and
   vanes have not been measured.

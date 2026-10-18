@@ -9,9 +9,6 @@ from ._covers import CoverRole, CoverSpec
 from ._model import Rail
 from ._motion import STEP
 
-RECOVERABLE = frozenset({CoverRole.SHADE, CoverRole.BOTTOM})
-"""The roles whose "open" is up, where gathered fabric can stop a move short."""
-
 
 @dataclass(frozen=True, slots=True)
 class StallRecovery:
@@ -68,7 +65,7 @@ def stalled_cover(
         None where no cover stalled.
     """
     for cover in shade_covers:
-        if cover.role not in RECOVERABLE:
+        if not cover.recoverable:
             continue
         aimed, reached = cover.openness(target), cover.openness(final)
         if aimed is None or reached is None or aimed < 1.0 - STEP:

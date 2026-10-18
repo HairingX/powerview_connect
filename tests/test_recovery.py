@@ -81,3 +81,10 @@ def test_stall_recovery_settings_that_cannot_work_are_refused(
     with pytest.raises(ValueError):
         StallRecovery(min_openness, steps, pause)
     assert StallRecovery(0.0, 1, 0.0).steps == 1
+
+
+def test_only_covers_that_open_upwards_are_recoverable() -> None:
+    assert [cover.recoverable for cover in TDBU] == [False, True]
+    assert CURTAIN[0].recoverable
+    assert not any(cover.recoverable for cover in _covers(Capabilities.DUAL_OVERLAPPED))
+    assert not _covers(Capabilities.TILT_ONLY_180)[0].recoverable

@@ -128,9 +128,19 @@ command. See Errors for what a command raises.
 
 A curtain sent fully open sometimes stops a little short, as the fabric gathering at the top
 takes room. Lifted the rest of the way in smaller steps, the fabric folds and it opens fully.
-`PowerViewHub(..., stall_recovery=StallRecovery())` does that, whoever started the move: this
-hub, the PowerView app, a voice assistant or a scene. It is off by default, and a read-only hub
-never does it.
+The hub does that for the shades it is turned on for, whoever started the move: this hub, the
+PowerView app, a voice assistant or a scene.
+
+```python
+hub = PowerViewHub(session, host, stall_recovery=StallRecovery(pause=10.0))  # or the defaults
+hub.set_stall_recovery(271, True)    # off for every shade until turned on
+hub.stall_recovery_enabled(271)      # True
+hub.stall_recovery = StallRecovery(min_openness=0.9)   # applies from the next stall
+```
+
+`CoverSpec.recoverable` says which covers it can raise. Turning it off for a shade ends a
+recovery of it in progress; a read-only hub refuses to turn it on, with `ReadOnlyError`. The hub
+does not keep which shades it is on for across restarts: that is the host's to keep.
 
 - **What counts.** A `motion-stopped` event for a `SHADE` cover, or the `BOTTOM` cover of a
   top-down/bottom-up shade with its top rail at the top, whose move aimed fully open and which

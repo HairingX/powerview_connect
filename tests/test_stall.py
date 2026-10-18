@@ -16,6 +16,7 @@ from powerview_connect import (
     CoverRole,
     PowerViewHub,
     Rail,
+    ReadOnlyError,
     ShadeStalled,
     StallOutcome,
     StallRecovery,
@@ -75,6 +76,8 @@ async def hub(
     found = PowerViewHub(session, gateway.host, timing=TIMING, clock=clock,
                          stall_recovery=RECOVERY)
     task = await _running(found)
+    found.set_stall_recovery(CURTAIN, True)
+    found.set_stall_recovery(TDBU, True)
     yield found
     await _stop(task)
 
@@ -353,30 +356,75 @@ async def _hub_stalls(
     return changes
 
 
-async def test_recovery_is_off_by_default(
+async def test_recovery_is_off_for_every_shade_until_turned_on(
     session: aiohttp.ClientSession, gateway: SimulatedGateway, app: PowerViewClient,
     clock: ManualClock,
 ) -> None:
     _furnish(gateway)
     hub = PowerViewHub(session, gateway.host, timing=TIMING, clock=clock)
     task = await _running(hub)
+    assert not hub.stall_recovery_enabled(CURTAIN)
+    assert hub.stall_recovery == StallRecovery()
     changes = await _hub_stalls(hub, gateway, app)
     assert not any(isinstance(change, ShadeStalled) for change in changes)
     assert len(_moves(gateway)) == 1
     await _stop(task)
 
 
-async def test_a_read_only_hub_never_raises_a_curtain(
-    session: aiohttp.ClientSession, gateway: SimulatedGateway, app: PowerViewClient,
-    clock: ManualClock,
+async def test_a_read_only_hub_refuses_to_raise_a_curtain(
+    session: aiohttp.ClientSession, gateway: SimulatedGateway, clock: ManualClock,
 ) -> None:
     _furnish(gateway)
-    hub = PowerViewHub(session, gateway.host, timing=TIMING, clock=clock, read_only=True,
-                       stall_recovery=RECOVERY)
-    task = await _running(hub)
-    changes = await _hub_stalls(hub, gateway, app)
-    assert not any(isinstance(change, ShadeStalled) for change in changes)
-    await _stop(task)
+    hub = PowerViewHub(session, gateway.host, timing=TIMING, clock=clock, read_only=True)
+    await hub.load()
+    with pytest.raises(ReadOnlyError):
+        hub.set_stall_recovery(CURTAIN, True)
+    hub.set_stall_recovery(CURTAIN, False)
+    assert not hub.stall_recovery_enabled(CURTAIN)
+
+
+async def test_turning_recovery_on_for_a_shade_not_known_is_refused(hub: PowerViewHub) -> None:
+    with pytest.raises(KeyError):
+        hub.set_stall_recovery(1, True)
+
+
+async def test_turning_recovery_off_ends_one_in_progress_and_raises_no_more(
+    hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, clock: ManualClock,
+    stalls: list[ShadeStalled],
+) -> None:
+    await _stalled_at(app, gateway, hub, CURTAIN, 0.9)
+    await until(lambda: len(_moves(gateway)) == 2)
+    hub.set_stall_recovery(CURTAIN, False)
+    await until(lambda: len(stalls) == 2)
+    assert stalls[1].outcome is StallOutcome.INTERRUPTED
+    await _stalled_at(app, gateway, hub, CURTAIN, 0.85)
+    await _pause(clock, 30.0)
+    assert len(stalls) == 2 and len(_moves(gateway)) == 3
+
+
+async def test_settings_changed_while_running_apply_to_the_next_stall(
+    hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, clock: ManualClock,
+    stalls: list[ShadeStalled],
+) -> None:
+    hub.stall_recovery = StallRecovery(min_openness=0.95, steps=1, pause=0.0)
+    await _stalled_at(app, gateway, hub, CURTAIN, 0.9)
+    await asyncio.sleep(0.05)
+    assert stalls == []
+    await _stalled_at(app, gateway, hub, CURTAIN, 0.96)
+    await _step(hub, gateway, 3)
+    await _pause(clock, 0.5)
+    await until(lambda: len(stalls) == 2)
+    assert _moves(gateway)[-1] == {"positions": {"primary": 1.0}}
+    assert stalls[1].outcome is StallOutcome.RECOVERED
+
+
+async def test_a_shade_removed_from_the_home_is_no_longer_raised(
+    hub: PowerViewHub, gateway: SimulatedGateway,
+) -> None:
+    gateway.remove_shade(CURTAIN)
+    await hub.refresh()
+    await hub.refresh()
+    assert not hub.stall_recovery_enabled(CURTAIN)
 
 
 async def test_nothing_is_raised_while_run_does_not_run(
@@ -385,6 +433,7 @@ async def test_nothing_is_raised_while_run_does_not_run(
     _furnish(gateway)
     hub = PowerViewHub(session, gateway.host, timing=TIMING, clock=clock, stall_recovery=RECOVERY)
     task = await _running(hub)
+    hub.set_stall_recovery(CURTAIN, True)
     await _stop(task)
     changes: list[Change] = []
     hub.subscribe(changes.append)
@@ -403,6 +452,7 @@ async def test_a_recovery_ends_interrupted_when_run_is_cancelled(
     _furnish(gateway)
     hub = PowerViewHub(session, gateway.host, timing=TIMING, clock=clock, stall_recovery=RECOVERY)
     task = await _running(hub)
+    hub.set_stall_recovery(CURTAIN, True)
     changes: list[Change] = []
     hub.subscribe(changes.append)
     await _stalled_at(app, gateway, hub, CURTAIN, 0.9)

@@ -262,8 +262,8 @@ class PowerViewHub:
 
         Args:
             read_only: refuse every command before it reaches the gateway, with `ReadOnlyError`.
-            stall_recovery: raise a cover that stops short of fully open the rest of the way,
-                while `run` runs; None leaves it where it stopped. A read-only hub never does.
+            stall_recovery: how a cover that stops short of fully open is raised, for the shades
+                `set_stall_recovery` turns it on for; None for the defaults.
         """
         self._timing = timing or Timing()
         self._clock = clock or SystemClock()
@@ -288,7 +288,9 @@ class PowerViewHub:
         self._connection = Connection.CONNECTING
         self._listeners = _Listeners()
         self._task: asyncio.Task[None] | None = None
-        self._stall_recovery = None if read_only else stall_recovery
+        self._stall_recovery = stall_recovery or StallRecovery()
+        self._raised: set[int] = set()
+        """The shades whose covers are raised when they stop short of fully open."""
         self._recoveries: dict[int, _Recovery] = {}
         self._group: asyncio.TaskGroup | None = None
 
@@ -355,6 +357,40 @@ class PowerViewHub:
     def gateways(self) -> Mapping[str, GatewayState]:
         """Every gateway's state, by serial number."""
         return dict(self._gateway_states)
+
+    @property
+    def stall_recovery(self) -> StallRecovery:
+        """How a cover that stops short of fully open is raised; a change applies from the next
+        stall."""
+        return self._stall_recovery
+
+    @stall_recovery.setter
+    def stall_recovery(self, settings: StallRecovery) -> None:
+        self._stall_recovery = settings
+
+    def stall_recovery_enabled(self, shade_id: int) -> bool:
+        """Whether the shade's covers are raised when they stop short of fully open."""
+        return shade_id in self._raised
+
+    def set_stall_recovery(self, shade_id: int, enabled: bool) -> None:
+        """Raise the shade's covers when they stop short of fully open, or stop doing so.
+
+        Off for every shade until turned on. It works while `run` runs, and only for covers that
+        are `recoverable`; turning it off ends a recovery of the shade in progress.
+
+        Raises:
+            KeyError: the home has no such shade.
+            ReadOnlyError: it is turned on for a read-only hub, which sends no commands.
+        """
+        if shade_id not in self._trackers:
+            raise KeyError(shade_id)
+        if not enabled:
+            self._raised.discard(shade_id)
+            self._interrupt(shade_id)
+            return
+        if self.read_only:
+            raise ReadOnlyError(f"stall recovery of shade {shade_id} refused: the hub is read-only")
+        self._raised.add(shade_id)
 
     def gateway_of(self, shade_id: int) -> Gateway | None:
         """The gateway that serves a shade, the one the hub reaches when no gateway says so."""
@@ -628,6 +664,7 @@ class PowerViewHub:
                         scenes_changed, gateways_added, gateways_removed, gateways_changed)
         self._home = home
         for shade_id in removed:
+            self._raised.discard(shade_id)
             self._interrupt(shade_id)
             del self._shades[shade_id], self._trackers[shade_id], self._states[shade_id]
             self._moving.discard(shade_id)
@@ -802,7 +839,7 @@ class PowerViewHub:
 
     def _detect_stall(self, shade_id: int) -> None:
         settings, group = self._stall_recovery, self._group
-        if settings is None or group is None:
+        if shade_id not in self._raised or group is None:
             return
         tracker = self._trackers[shade_id]
         final = {rail: value for rail, value in tracker.current.items() if value is not None}

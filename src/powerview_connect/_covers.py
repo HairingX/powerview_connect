@@ -55,6 +55,12 @@ class CoverSpec:
     vertical: bool = False
     """The shade draws sideways, as a curtain does."""
 
+    @property
+    def recoverable(self) -> bool:
+        """Whether the cover opens upwards, so a hub can raise it when it stops short of fully
+        open."""
+        return self.role in (CoverRole.SHADE, CoverRole.BOTTOM)
+
     def openness(self, positions: Mapping[Rail, float]) -> float | None:
         """How far the cover's rail is open in `positions`; None without a rail or a value."""
         if self.rail is None or (value := positions.get(self.rail)) is None:
