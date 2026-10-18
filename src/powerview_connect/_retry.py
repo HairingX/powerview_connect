@@ -22,6 +22,7 @@ class StalledOpenRetry:
     min_openness: float = 0.8
     """The lowest openness counted as stalled; a stop below it is taken as meant."""
     steps: int = 3
+    """How many even steps the rest of the opening is split into."""
     delay: float = 90.0
 
     def __post_init__(self) -> None:

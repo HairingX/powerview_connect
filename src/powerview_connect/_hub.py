@@ -215,11 +215,11 @@ type Change = ShadeChanged | GatewayChanged | ConnectionChanged | HomeChanged | 
 
 
 class _Interrupted(Exception):
-    """A running was interrupted by something else moving, stopping or removing its shade."""
+    """A retry was interrupted by something else moving, stopping or removing its shade."""
 
 
 @dataclass(slots=True)
-class _Running:
+class _ActiveRetry:
     cover: CoverSpec
     expected: float | None = None
     """The openness of the step sent, while its move is awaited."""
@@ -297,8 +297,8 @@ class PowerViewHub:
         self._listeners = _Listeners()
         self._task: asyncio.Task[None] | None = None
         self._retries: dict[tuple[int, CoverRole], StalledOpenRetry] = {}
-        """How a stalled opening of each cover it is retried for is retried."""
-        self._running: dict[int, _Running] = {}
+        """The retry settings of each cover, by shade id and role."""
+        self._active: dict[int, _ActiveRetry] = {}
         self._group: asyncio.TaskGroup | None = None
 
     # ---------------------------------------------------------------- what is known
@@ -387,8 +387,8 @@ class PowerViewHub:
             raise KeyError(shade_id)
         if retry is None:
             self._retries.pop((shade_id, role), None)
-            running = self._running.get(shade_id)
-            if running is not None and running.cover.role is role:
+            active = self._active.get(shade_id)
+            if active is not None and active.cover.role is role:
                 self._interrupt(shade_id)
             return
         if not any(cover.retryable and cover.role is role
@@ -821,16 +821,16 @@ class PowerViewHub:
         tracker = self._trackers.get(event.shade_id)
         if tracker is None:
             return
-        running = self._running.get(event.shade_id)
+        active = self._active.get(event.shade_id)
         match event.kind:
             case EventKind.MOTION_STARTED:
                 tracker.motion_started(event, self._clock.monotonic())
                 self._poll(event.shade_id)
-                if running is not None:
-                    aimed = running.cover.openness(event.target)
+                if active is not None:
+                    aimed = active.cover.openness(event.target)
                     # A move without a target for the rail cannot be told from the step's own.
-                    if aimed is not None and (running.expected is None
-                                              or abs(aimed - running.expected) > STEP):
+                    if aimed is not None and (active.expected is None
+                                              or abs(aimed - active.expected) > STEP):
                         self._interrupt(event.shade_id)
             case EventKind.MOTION_STOPPED:
                 tracker.motion_stopped(event)
@@ -845,10 +845,10 @@ class PowerViewHub:
                 return
         self._update_shade(event.shade_id)
         if event.kind == EventKind.MOTION_STOPPED:
-            if running is None:
+            if active is None:
                 self._detect_stall(event.shade_id)
-            elif running.expected is not None:
-                running.wake.set()
+            elif active.expected is not None:
+                active.wake.set()
 
     # ----------------------------------------------------------------- stalls
 
@@ -865,20 +865,20 @@ class PowerViewHub:
             openness = stalled_openness(cover, tracker.last_target, final, settings)
             if openness is None:
                 continue
-            # One running per stalled move: its own steps' stops are not looked at again.
+            # One retry per stalled move: its own steps' stops are not looked at again.
             tracker.last_target = {}
-            self._running[shade_id] = running = _Running(cover)
+            self._active[shade_id] = active = _ActiveRetry(cover)
             self._log.info("Shade %s (%s) stalled at %.2f of fully open; retrying its %s cover "
                            "in steps", shade_id, self._shades[shade_id].name, openness, cover.role)
             self._emit_stall(shade_id, cover, openness, RetryOutcome.STARTED)
-            group.create_task(self._retry(shade_id, running, openness, settings))
+            group.create_task(self._retry(shade_id, active, openness, settings))
             return
 
     def _interrupt(self, shade_id: int) -> None:
-        running = self._running.get(shade_id)
-        if running is not None:
-            running.interrupted = True
-            running.wake.set()
+        active = self._active.get(shade_id)
+        if active is not None:
+            active.interrupted = True
+            active.wake.set()
 
     def _cover_openness(self, shade_id: int, cover: CoverSpec) -> float | None:
         tracker = self._trackers.get(shade_id)
@@ -887,11 +887,11 @@ class PowerViewHub:
         return cover.openness({rail: value for rail, value in tracker.current.items()
                                if value is not None})
 
-    async def _retry(self, shade_id: int, running: _Running, start: float,
-                       settings: StalledOpenRetry) -> None:
+    async def _retry(self, shade_id: int, active: _ActiveRetry, start: float,
+                     settings: StalledOpenRetry) -> None:
         outcome = RetryOutcome.GAVE_UP
         try:
-            outcome = await self._open_in_steps(shade_id, running, start, settings)
+            outcome = await self._open_in_steps(shade_id, active, start, settings)
         except _Interrupted:
             outcome = RetryOutcome.INTERRUPTED
         except asyncio.CancelledError:
@@ -902,50 +902,50 @@ class PowerViewHub:
         except Exception:
             self._log.exception("Retrying shade %s failed", shade_id)
         finally:
-            del self._running[shade_id]
+            del self._active[shade_id]
             if (tracker := self._trackers.get(shade_id)) is not None:
                 tracker.last_target = {}
-            openness = self._cover_openness(shade_id, running.cover)
+            openness = self._cover_openness(shade_id, active.cover)
             name = self._shades[shade_id].name if shade_id in self._shades else ""
             self._log.info("Shade %s (%s) ended at %s: %s", shade_id, name,
                            "unknown" if openness is None else f"{openness:.2f}", outcome)
-            self._emit_stall(shade_id, running.cover, openness, outcome)
+            self._emit_stall(shade_id, active.cover, openness, outcome)
 
-    async def _open_in_steps(self, shade_id: int, running: _Running, start: float,
-                              settings: StalledOpenRetry) -> RetryOutcome:
+    async def _open_in_steps(self, shade_id: int, active: _ActiveRetry, start: float,
+                             settings: StalledOpenRetry) -> RetryOutcome:
         reached = start
         for openness in retry_steps(start, settings.steps):
-            positions = running.cover.position(openness)
-            running.wake.clear()
+            positions = active.cover.position(openness)
+            active.wake.clear()
             # Set before sending: the step's motion-started can arrive before the answer.
-            running.expected = openness
+            active.expected = openness
             await self._send_move(shade_id, positions)
-            if not await self._wait(running, self._timing.retry_step_timeout):
+            if not await self._wait(active, self._timing.retry_step_timeout):
                 self._log.debug("Shade %s did not stop within %.0f s", shade_id,
                                 self._timing.retry_step_timeout)
                 return RetryOutcome.GAVE_UP
-            running.expected = None
-            running.wake.clear()
-            await self._wait(running, settings.delay)
-            now = self._cover_openness(shade_id, running.cover)
+            active.expected = None
+            active.wake.clear()
+            await self._wait(active, settings.delay)
+            now = self._cover_openness(shade_id, active.cover)
             if now is None or now <= reached + STEP:
                 return RetryOutcome.GAVE_UP
             reached = now
         return RetryOutcome.OPENED if reached >= 1.0 - STEP else RetryOutcome.GAVE_UP
 
-    async def _wait(self, running: _Running, seconds: float) -> bool:
-        """Wait on the hub's clock until the running is woken or `seconds` have passed; returns
+    async def _wait(self, active: _ActiveRetry, seconds: float) -> bool:
+        """Wait on the hub's clock until the retry is woken or `seconds` have passed; returns
         whether it was woken, and raises `_Interrupted` once it is interrupted."""
-        woken = asyncio.ensure_future(running.wake.wait())
+        woken = asyncio.ensure_future(active.wake.wait())
         slept = asyncio.ensure_future(self._clock.sleep(seconds))
         try:
             await asyncio.wait((woken, slept), return_when=asyncio.FIRST_COMPLETED)
         finally:
             woken.cancel()
             slept.cancel()
-        if running.interrupted:
+        if active.interrupted:
             raise _Interrupted
-        return running.wake.is_set()
+        return active.wake.is_set()
 
     def _poll(self, shade_id: int) -> None:
         self._moving.add(shade_id)

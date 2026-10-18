@@ -272,13 +272,8 @@ everything else may change in any release.
   fields by name, in construction and in `match`, so a new field breaks no caller. A listener
   or `match` over changes passes over the kinds it does not know, and one over an enum keeps a
   default case.
-- **Only a breaking release changes** the name or meaning of anything public, the value of an
-  enum member (a host may keep it, in an id of its own), or which covers a shade's capabilities
-  give it, with their roles.
-- **Never promised:** what `snapshot()` holds, and what is logged.
 - **A breaking release** raises at least the minor version, and its notes say what broke.
-  What can warn first does, with a `DeprecationWarning`, for at least one release before it
-  goes.
+- **Never promised:** what `snapshot()` holds, and what is logged.
 
 ## Links
 

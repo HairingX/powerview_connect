@@ -16,13 +16,10 @@ The package's `__all__` is its whole public API, and the README documents nothin
 - **Errors:** `PowerViewError` and its kinds, and `CommandFailure`.
 - **`powerview_connect.testing`:** the simulated gateway, what it holds, and the manual clock.
 
-It is built to grow without breaking what uses it, as the README's Stability section promises:
+It is built to grow by adding to it:
 
 - **Every data class takes its fields by name** (`kw_only`), which also leaves it no positional
   `match` pattern: a field can be added anywhere, and the order of fields is no promise.
-- **Values a host may keep are stable.** An enum member's value can end up in a host's own ids,
-  such as a cover's role in an entity's unique id, and which covers a capability gives decides
-  which entities a host has; both change only in a breaking release.
 - **A setting names what it is for**, a retry its cover by shade id and role, so a second such
   cover on one shade needs no new signature.
 - **Collections handed out are read-only:** `Mapping` copies of what the hub knows, and tuples
@@ -104,10 +101,9 @@ started it, the hub can tell such a stop and retry it.
   step sent, the shade going offline or leaving the home, or the retry turned off ends it as
   `INTERRUPTED`. A `motion-started` without a target for the rail cannot be told from the step's
   own, so it does not.
-- **Time** is the hub's `Clock`: the wait for each step's stop, up to `Timing.retry_step_timeout`,
-  apart from the tracker's own limits, and
-  the `delay` after it, 90 s by default, as gathered fabric takes about a minute or more to
-  settle.
+- **Time** is the hub's `Clock`: the wait for each step's stop, up to `Timing.retry_step_timeout`
+  and apart from the tracker's own limits, and the `delay` after it, 90 s by default, as gathered
+  fabric takes about a minute or more to settle.
 
 ## Connection
 
