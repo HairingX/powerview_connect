@@ -14,34 +14,36 @@ from ._motion import STEP
 class StalledOpenRetry:
     """How a cover sent fully open whose motor backed off short of the top is opened after all.
 
-    A cover sent fully open that ends at `min_openness` or above, short of the top, is lowered by
-    `lower_by`, and then raised to fully open in `steps` even steps, with `delay` seconds after
-    each one for the fabric to settle.
+    A cover sent fully open that ends at `min_openness` or above, short of the top, is left
+    `wait` seconds, then raised in three steps: two thirds of the way to the top, five sixths,
+    and fully open. The first step is sent again, up to `attempts` times in all, each time the
+    motor backs off from it; after each step that holds, the cover is left `delay` seconds. A
+    later step the motor backs off from starts a new round, up to `rounds` in all.
     """
 
     min_openness: float = 0.8
     """The lowest openness counted as backed off; a stop below it is taken as meant."""
-    lower_by: float = 0.1
-    """How far the cover is lowered first: a motor that backed off does not go up from where it
-    stopped."""
-    steps: int = 3
-    """How many even steps the cover is raised in, from where it was lowered to."""
-    delay: float = 90.0
-    """Seconds after each step, for the fabric to settle."""
+    wait: float = 330.0
+    """Seconds after the motor backed off before the first step of a round: steps sent 13 s and
+    158 s after were refused."""
+    attempts: int = 5
+    """How many times the first step of a round is sent at most."""
+    rounds: int = 3
+    """How many rounds are started at most."""
+    delay: float = 300.0
+    """Seconds after each step that held, for the fabric to settle."""
 
     def __post_init__(self) -> None:
         """Refuse settings that cannot work.
 
         Raises:
-            ValueError: `min_openness` is outside 0.0 to below 1.0, `lower_by` is outside
-                above 0.0 to 1.0, `steps` is below 1, or `delay` is negative.
+            ValueError: `min_openness` is outside 0.0 to below 1.0, `attempts` or `rounds` is
+                below 1, or `wait` or `delay` is negative.
         """
         if not 0.0 <= self.min_openness < 1.0:
             raise ValueError(f"min_openness runs from 0.0 to below 1.0: {self}")
-        if not 0.0 < self.lower_by <= 1.0:
-            raise ValueError(f"lower_by runs from above 0.0 to 1.0: {self}")
-        if self.steps < 1 or self.delay < 0:
-            raise ValueError(f"steps starts at 1 and delay at 0: {self}")
+        if min(self.attempts, self.rounds) < 1 or min(self.wait, self.delay) < 0:
+            raise ValueError(f"attempts and rounds start at 1, wait and delay at 0: {self}")
 
 
 class RetryOutcome(StrEnum):
@@ -83,13 +85,18 @@ def stalled_openness(
 
 
 
-def retry_steps(start: float, steps: int) -> list[float]:
-    """The openness of each of `steps` even steps from `start` to fully open, leaving out steps
-    that would not move the cover."""
+STEPS = (2 / 3, 5 / 6, 1.0)
+"""How far each step goes, of the way from where the cover stopped to fully open: the motor was
+seen to back off only on the last part of the way."""
+
+
+def retry_steps(start: float) -> list[float]:
+    """The openness of each step from `start` to fully open, leaving out steps that would not
+    move the cover."""
     found: list[float] = []
     previous = start
-    for step in range(1, steps + 1):
-        value = 1.0 if step == steps else round(start + (1.0 - start) * step / steps, 2)
+    for share in STEPS:
+        value = round(start + (1.0 - start) * share, 2)
         if value > previous + STEP:
             found.append(value)
             previous = value
