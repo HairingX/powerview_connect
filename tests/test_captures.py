@@ -97,10 +97,10 @@ def test_every_capture_is_described() -> None:
         assert f"`{path.relative_to(CAPTURES).as_posix()}`" in readme, path
 
 
-def _replay_stalls() -> tuple[list[tuple[int, float]], list[tuple[int, float]]]:
+def _replay_stalls() -> list[tuple[int, float]]:
     """The stalls of 2026-10-18 replayed through the tracker, with the commands sent: each
-    motion-stopped that ends a move aimed fully open short of the top, and each that ends no move,
-    by its shade and where it stopped."""
+    motion-stopped short of the top after a move aimed fully open, by its shade and where it
+    stopped."""
     events = cast(list[dict[str, object]], json.loads(
         (CAPTURES / "2026-10-18/stall-events.json").read_text(encoding="utf-8")))
     moves = cast(list[dict[str, object]], json.loads(
@@ -111,7 +111,6 @@ def _replay_stalls() -> tuple[list[tuple[int, float]], list[tuple[int, float]]]:
         key=lambda item: (item[0], item[1]))
     trackers: dict[int, ShadeTracker] = {}
     stalls: list[tuple[int, float]] = []
-    slides: list[tuple[int, float]] = []
     for seconds, is_event, item in timeline:
         shade_id = cast(int, item["id"])
         tracker = trackers.setdefault(shade_id, ShadeTracker())
@@ -125,17 +124,13 @@ def _replay_stalls() -> tuple[list[tuple[int, float]], list[tuple[int, float]]]:
         elif event.kind == "shade-online":
             tracker.snapshot(event.current)
         elif event.kind == "motion-stopped":
-            before = dict(tracker.last_target)
             tracker.motion_stopped(event)
             at = event.current[Rail.PRIMARY]
-            if before and not tracker.last_target:
-                slides.append((shade_id, at))
-            elif tracker.last_target.get(Rail.PRIMARY) == 1.0 and at < 0.995:
+            if tracker.last_target.get(Rail.PRIMARY) == 1.0 and at < 0.995:
                 stalls.append((shade_id, at))
-    return stalls, slides
+    return stalls
 
 
-def test_the_curtains_that_slid_down_from_the_top_end_no_move_and_their_stalls_still_count() -> None:
-    stalls, slides = _replay_stalls()
-    assert slides == [(262, 0.95), (280, 0.95)]
-    assert stalls == [(262, 0.95), (280, 0.91), (280, 0.86)]
+def test_every_motor_that_backed_off_short_of_the_top_counts_and_where_it_stopped() -> None:
+    """At the top as well as on the way: both end short of where the move was sent."""
+    assert _replay_stalls() == [(262, 0.95), (262, 0.95), (280, 0.91), (280, 0.86), (280, 0.95)]
