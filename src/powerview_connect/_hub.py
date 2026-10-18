@@ -32,13 +32,7 @@ from ._model import (
     ShadeEvent,
 )
 from ._motion import STEP, ShadeTracker
-from ._retry import (
-    RetryOutcome,
-    StalledOpenRetry,
-    lowered_to,
-    retry_steps,
-    stalled_openness,
-)
+from ._retry import RetryOutcome, StalledOpenRetry, retry_steps, stalled_openness
 
 type Listener[T] = Callable[[T], None]
 type Unsubscribe = Callable[[], None]
@@ -909,12 +903,6 @@ class PowerViewHub:
         return cover.openness({rail: value for rail, value in tracker.current.items()
                                if value is not None})
 
-    def _highest_openness(self, shade_id: int, cover: CoverSpec) -> float:
-        """How far `cover` was open at most since the shade's last move began; 0.0 unknown."""
-        return max((cover.openness({rail: value}) or 0.0
-                    for rail, span in self._trackers[shade_id].span.items() if rail is cover.rail
-                    for value in span), default=0.0)
-
     def _name(self, shade_id: int) -> str:
         return self._shades[shade_id].name if shade_id in self._shades else ""
 
@@ -951,14 +939,13 @@ class PowerViewHub:
             await self._wait_quiet(active, self._timing.retry_settle)
             now = self._cover_openness(shade_id, active.cover)
             reached = reached if now is None else now
-            highest = max(reached, self._highest_openness(shade_id, active.cover))
-            lower = lowered_to(highest, reached, settings.back_offs)
-            self._log.warning("Shade %s (%s) reached %.2f and backed off to %.2f: round %d of %d, "
-                              "lowering it to %.2f", shade_id, name, highest, reached, round_,
-                              settings.rounds, lower)
+            self._log.warning("Shade %s (%s) backed off to %.2f: round %d of %d, lowering it to "
+                              "%.2f", shade_id, name, reached, round_, settings.rounds,
+                              settings.lower_to)
             # The steps go up from where the motor backed off to, not from where it is lowered.
             steps = retry_steps(reached)
-            reached = await self._step(shade_id, active, lower)
+            if reached > settings.lower_to + STEP:
+                reached = await self._step(shade_id, active, settings.lower_to)
             for number, openness in enumerate(steps, start=1):
                 self._log.warning("Shade %s (%s) at %.2f: step %d of %d to %.2f", shade_id,
                                   name, reached, number, len(steps), openness)

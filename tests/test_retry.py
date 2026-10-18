@@ -5,7 +5,7 @@ import pytest
 
 from powerview_connect import Capabilities, CoverRole, CoverSpec, Rail, Shade, StalledOpenRetry
 from powerview_connect._covers import covers
-from powerview_connect._retry import lowered_to, retry_steps, stalled_openness
+from powerview_connect._retry import retry_steps, stalled_openness
 
 P, S, T = Rail.PRIMARY, Rail.SECONDARY, Rail.TILT
 SETTINGS = StalledOpenRetry()
@@ -88,27 +88,17 @@ def test_steps_that_would_not_move_the_cover_are_left_out() -> None:
 
 
 @pytest.mark.parametrize("wrong", [
-    {"min_openness": -0.1}, {"min_openness": 1.0}, {"back_offs": 0}, {"rounds": 0},
-    {"delay": -1.0}])
+    {"min_openness": -0.1}, {"min_openness": 1.0}, {"lower_to": -0.1}, {"lower_to": 1.0},
+    {"rounds": 0}, {"delay": -1.0}])
 def test_retry_settings_that_cannot_work_are_refused(wrong: dict[str, Any]) -> None:
     with pytest.raises(ValueError):
         StalledOpenRetry(**wrong)
 
 
-def test_a_retry_lowers_four_back_offs_in_up_to_three_rounds_unless_told_otherwise() -> None:
-    assert StalledOpenRetry() == StalledOpenRetry(min_openness=0.8, back_offs=4, rounds=3,
+def test_a_retry_lowers_to_half_open_in_up_to_three_rounds_unless_told_otherwise() -> None:
+    assert StalledOpenRetry() == StalledOpenRetry(min_openness=0.8, lower_to=0.5, rounds=3,
                                                   delay=300.0)
-    assert StalledOpenRetry(min_openness=0.0, back_offs=1, rounds=1, delay=0.0).rounds == 1
-
-
-def test_a_cover_is_lowered_its_back_offs_each_half_a_step_more_below_where_it_reached() -> None:
-    assert lowered_to(1.0, 0.95, 4) == 0.78
-    assert lowered_to(1.0, 0.98, 4) == 0.9
-    assert lowered_to(0.9, 0.9, 4) == 0.88
-
-
-def test_a_cover_is_lowered_no_further_than_closed() -> None:
-    assert lowered_to(0.5, 0.3, 4) == 0.0
+    assert StalledOpenRetry(min_openness=0.0, lower_to=0.0, rounds=1, delay=0.0).rounds == 1
 
 
 def test_only_pleated_covers_that_open_upwards_are_retryable() -> None:

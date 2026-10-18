@@ -97,12 +97,8 @@ it stopped, whoever started it, the hub can tell such a stop and retry it so.
   stop from the app cannot be told from a stall; a shade often stopped there by hand is left
   with the retry off.
 - **Lower, then raise in steps.** A motor that backed off was seen to refuse an opening from 0.85
-  and above, at once or after minutes, and to take one from 0.81, four back-offs of 0.05 below
-  the top. A motor likely counts turns, not distance, so a taller shade backs off less of its
-  height: the retry lowers the cover below the highest point it reached since its last move
-  began by `back_offs` times the back-off, 4 by default, each counted half a step more, as
-  positions come rounded to 0.01. The tracker keeps each rail's lowest and highest position
-  since a move began for it. The steps up are worked out from where the motor backed off
+  and above, at once or after minutes, to take one from 0.81 once and refuse it once, and to take
+  openings from 0.59 and 0.70. So the retry lowers the cover to `lower_to`, 0.5 by default, first. The steps up are worked out from where the motor backed off
   to, as that is as far as the fabric was gathered: two thirds of the way from there to the top,
   five sixths, and all of the way. Where the motor backed off to, and where a step ended, counts
   once the shade has sent no event for `Timing.retry_settle`: a motor backing off reports where it
