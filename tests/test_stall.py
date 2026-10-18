@@ -1,5 +1,5 @@
-"""Retrying an opening whose motor backed off short of the top, whoever started it: the cover is
-lowered, then raised in steps with a pause after each."""
+"""Retrying an opening whose motor backed off short of the top, whoever started it: after a
+wait the cover is raised in steps, the first sent again while the motor backs off from it."""
 import asyncio
 import logging
 from collections.abc import AsyncIterator
@@ -30,7 +30,7 @@ from powerview_connect.testing import ManualClock, SimulatedGateway
 P, S, T = Rail.PRIMARY, Rail.SECONDARY, Rail.TILT
 CURTAIN, TDBU = 271, 154
 TIMING = Timing(stream_idle_timeout=30.0, min_timeout=90.0, retry_move_timeout=40.0)
-RETRY = StalledOpenRetry(delay=10.0)
+RETRY = StalledOpenRetry(wait=20.0, attempts=2, rounds=2, delay=10.0)
 
 
 def _furnish(gateway: SimulatedGateway) -> None:
@@ -118,12 +118,17 @@ async def _end_move(hub: PowerViewHub, gateway: SimulatedGateway, moves: int,
     await asyncio.sleep(0.02)
 
 
-async def _lowered(hub: PowerViewHub, gateway: SimulatedGateway, clock: ManualClock, moves: int,
-                   shade_id: int = CURTAIN) -> None:
-    """End the hub's lowering, the `moves`th move sent, at its target, and let the shade stay
-    quiet until the hub opens it."""
-    await _end_move(hub, gateway, moves, shade_id=shade_id)
-    await _pause(clock, 3.5)
+async def _waited(clock: ManualClock) -> None:
+    """Let the retry's wait before its first step pass."""
+    await _pause(clock, 20.5)
+
+
+async def _ends(hub: PowerViewHub, gateway: SimulatedGateway, clock: ManualClock, moves: int,
+                at: float | None = None, shade_id: int = CURTAIN) -> None:
+    """End the hub's `moves`th move, at `at` if given, and let the shade stay quiet, and then the
+    delay after a step that held pass."""
+    await _end_move(hub, gateway, moves, at, shade_id)
+    await _pause(clock, 3.5 if at is not None else 14.0)
 
 
 def _sent(gateway: SimulatedGateway) -> list[object]:
@@ -140,16 +145,7 @@ def _rails_sent(gateway: SimulatedGateway) -> list[set[str]]:
     return found
 
 
-async def _steps(hub: PowerViewHub, gateway: SimulatedGateway, clock: ManualClock,
-                 first: int, count: int, shade_id: int = CURTAIN) -> None:
-    """End `count` steps of the hub at their targets, from the `first`th move sent, each with its
-    pause."""
-    for moves in range(first, first + count):
-        await _end_move(hub, gateway, moves, shade_id=shade_id)
-        await _pause(clock, 10.5)
-
-
-async def test_a_curtain_the_app_opened_that_stopped_short_is_lowered_and_raised_in_steps(
+async def test_a_curtain_the_app_opened_that_stopped_short_is_raised_in_steps_after_a_wait(
     hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, clock: ManualClock,
     stalls: list[ShadeStalled],
 ) -> None:
@@ -157,16 +153,20 @@ async def test_a_curtain_the_app_opened_that_stopped_short_is_lowered_and_raised
     await until(lambda: len(stalls) == 1)
     assert stalls[0] == ShadeStalled(shade_id=CURTAIN, role=CoverRole.SHADE,
                                      openness=0.9, outcome=RetryOutcome.STARTED)
-    await _lowered(hub, gateway, clock, 2)
-    await _steps(hub, gateway, clock, 3, 3)
+    await _pause(clock, 19.5)
+    assert len(_moves(gateway)) == 1
+    await _pause(clock, 1.0)
+    for moves in (2, 3, 4):
+        await _ends(hub, gateway, clock, moves)
     await until(lambda: len(stalls) == 2)
     assert stalls[1] == ShadeStalled(shade_id=CURTAIN, role=CoverRole.SHADE,
                                      openness=1.0, outcome=RetryOutcome.OPENED)
-    assert _sent(gateway) == [0.8, 0.87, 0.93, 1.0]
-    assert gateway.requests[-1].query == {"ids": str(CURTAIN)}
+    assert _sent(gateway) == [0.97, 0.98, 1.0]
+    assert [request.query for request in gateway.requests
+            if request.method == "PUT"][-1] == {"ids": str(CURTAIN)}
 
 
-async def test_a_curtain_whose_motor_backs_off_at_the_top_is_lowered_and_raised_in_steps(
+async def test_a_curtain_whose_motor_backs_off_at_the_top_is_raised_in_steps(
     hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, clock: ManualClock,
     stalls: list[ShadeStalled],
 ) -> None:
@@ -177,96 +177,132 @@ async def test_a_curtain_whose_motor_backs_off_at_the_top_is_lowered_and_raised_
     gateway.drift(CURTAIN, {P: 0.95})
     await until(lambda: len(stalls) == 1)
     assert stalls[0].openness == 0.95
-    await _lowered(hub, gateway, clock, 2)
-    await _steps(hub, gateway, clock, 3, 3)
+    await _waited(clock)
+    for moves in (2, 3, 4):
+        await _ends(hub, gateway, clock, moves)
     await until(lambda: len(stalls) == 2)
     assert stalls[1].outcome is RetryOutcome.OPENED
-    assert _sent(gateway) == [0.85, 0.9, 0.95, 1.0]
+    assert _sent(gateway) == [0.98, 0.99, 1.0]
 
 
-async def test_the_bottom_rail_is_lowered_and_raised_with_only_its_own_rail(
+async def test_the_bottom_rail_is_raised_with_only_its_own_rail(
     hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, clock: ManualClock,
     stalls: list[ShadeStalled],
 ) -> None:
     await _stalled_at(app, gateway, hub, TDBU, 0.85)
-    await _lowered(hub, gateway, clock, 2, shade_id=TDBU)
-    await _steps(hub, gateway, clock, 3, 3, shade_id=TDBU)
+    await _waited(clock)
+    for moves in (2, 3, 4):
+        await _ends(hub, gateway, clock, moves, shade_id=TDBU)
     await until(lambda: len(stalls) == 2)
     assert [stall.role for stall in stalls] == [CoverRole.BOTTOM, CoverRole.BOTTOM]
     assert stalls[1].outcome is RetryOutcome.OPENED
-    assert _rails_sent(gateway) == [{"primary"}] * 5
-    assert _sent(gateway) == [0.75, 0.83, 0.92, 1.0]
+    assert _rails_sent(gateway) == [{"primary"}] * 4
+    assert _sent(gateway) == [0.95, 0.97, 1.0]
 
 
-async def test_a_motor_that_backs_off_without_motion_started_is_raised_once_it_stops(
-    hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, clock: ManualClock,
-    stalls: list[ShadeStalled],
-) -> None:
-    await _stalled_at(app, gateway, hub, CURTAIN, 0.91)
-    gateway.backing_off.add(CURTAIN)
-    await until(lambda: len(_moves(gateway)) == 2)
-    gateway.drift(CURTAIN, {P: 0.86})
-    await _pause(clock, 3.5)
-    await _steps(hub, gateway, clock, 3, 3)
-    await until(lambda: len(stalls) == 2)
-    assert stalls[1].outcome is RetryOutcome.OPENED
-    assert _sent(gateway) == [0.81, 0.91, 0.95, 1.0]
-
-
-async def test_a_step_that_does_not_raise_the_curtain_gives_up_with_no_more_steps(
+async def test_the_first_step_is_sent_again_at_once_once_the_motor_has_backed_off_from_it(
     hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, clock: ManualClock,
     stalls: list[ShadeStalled],
 ) -> None:
     await _stalled_at(app, gateway, hub, CURTAIN, 0.9)
-    await _lowered(hub, gateway, clock, 2)
-    await _end_move(hub, gateway, 3, at=0.8)
-    await _pause(clock, 10.5)
+    await _waited(clock)
+    await _end_move(hub, gateway, 2, at=0.91)
+    await _pause(clock, 2.0)
+    gateway.drift(CURTAIN, {P: 0.86})
+    await _pause(clock, 2.5)
+    assert len(_moves(gateway)) == 2
+    await _pause(clock, 1.0)
+    for moves in (3, 4, 5):
+        await _ends(hub, gateway, clock, moves)
+    await until(lambda: len(stalls) == 2)
+    assert stalls[1].outcome is RetryOutcome.OPENED
+    assert _sent(gateway) == [0.97, 0.97, 0.98, 1.0]
+
+
+async def test_a_first_step_the_motor_backs_off_at_instead_of_moving_is_sent_again(
+    hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, clock: ManualClock,
+    stalls: list[ShadeStalled],
+) -> None:
+    await _stalled_at(app, gateway, hub, CURTAIN, 0.9)
+    gateway.backing_off.add(CURTAIN)
+    await _waited(clock)
+    await until(lambda: len(_moves(gateway)) == 2)
+    gateway.drift(CURTAIN, {P: 0.86})
+    await _pause(clock, 3.5)
+    for moves in (3, 4, 5):
+        await _ends(hub, gateway, clock, moves)
+    await until(lambda: len(stalls) == 2)
+    assert stalls[1].outcome is RetryOutcome.OPENED
+    assert _sent(gateway) == [0.97, 0.97, 0.98, 1.0]
+
+
+async def test_a_first_step_the_motor_backs_off_from_in_every_attempt_gives_up(
+    hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, clock: ManualClock,
+    stalls: list[ShadeStalled], caplog: pytest.LogCaptureFixture,
+) -> None:
+    await _stalled_at(app, gateway, hub, CURTAIN, 0.9)
+    await _waited(clock)
+    await _ends(hub, gateway, clock, 2, at=0.86)
+    await _ends(hub, gateway, clock, 3, at=0.86)
     await until(lambda: len(stalls) == 2)
     assert stalls[1] == ShadeStalled(shade_id=CURTAIN, role=CoverRole.SHADE,
-                                     openness=0.8, outcome=RetryOutcome.GAVE_UP)
+                                     openness=0.86, outcome=RetryOutcome.GAVE_UP)
+    assert "backed off from 0.97 in each of 2 attempts" in caplog.text
     gateway.emit(EventKind.MOTION_STOPPED, CURTAIN)
     await _pause(clock, 30.0)
     assert len(stalls) == 2 and len(_moves(gateway)) == 3
 
 
-async def test_a_stop_event_during_the_pause_does_not_end_it_early(
-    hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, clock: ManualClock,
-) -> None:
-    await _stalled_at(app, gateway, hub, CURTAIN, 0.9)
-    await _lowered(hub, gateway, clock, 2)
-    await _end_move(hub, gateway, 3)
-    gateway.emit(EventKind.MOTION_STOPPED, CURTAIN)
-    await _pause(clock, 9.0)
-    assert len(_moves(gateway)) == 3
-    await _pause(clock, 1.5)
-    await until(lambda: len(_moves(gateway)) == 4)
-
-
-async def test_a_lowered_curtain_is_raised_only_once_it_has_been_quiet_for_a_while(
-    hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, clock: ManualClock,
-) -> None:
-    await _stalled_at(app, gateway, hub, CURTAIN, 0.9)
-    await _end_move(hub, gateway, 2)
-    await _pause(clock, 2.0)
-    gateway.shades[CURTAIN].positions[P] = 0.78
-    gateway.set_online(CURTAIN, True)
-    await _pause(clock, 2.0)
-    assert len(_moves(gateway)) == 2
-    await _pause(clock, 1.5)
-    await until(lambda: len(_moves(gateway)) == 3)
-
-
-async def test_a_lowering_without_motion_stopped_in_time_gives_up(
+async def test_a_later_step_the_motor_backs_off_from_starts_a_new_round_after_the_wait(
     hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, clock: ManualClock,
     stalls: list[ShadeStalled],
 ) -> None:
     await _stalled_at(app, gateway, hub, CURTAIN, 0.9)
-    await until(lambda: len(_moves(gateway)) == 2)
-    gateway.move(CURTAIN, {P: 0.85})
-    await _pause(clock, 45.0)
+    await _waited(clock)
+    await _ends(hub, gateway, clock, 2)
+    await _ends(hub, gateway, clock, 3)
+    await _ends(hub, gateway, clock, 4, at=0.95)
+    await _pause(clock, 19.0)
+    assert len(_moves(gateway)) == 4
+    await _pause(clock, 1.0)
+    for moves in (5, 6, 7):
+        await _ends(hub, gateway, clock, moves)
+    await until(lambda: len(stalls) == 2)
+    assert stalls[1].outcome is RetryOutcome.OPENED
+    assert _sent(gateway) == [0.97, 0.98, 1.0, 0.98, 0.99, 1.0]
+
+
+async def test_a_motor_that_backs_off_in_every_round_gives_up(
+    hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, clock: ManualClock,
+    stalls: list[ShadeStalled], caplog: pytest.LogCaptureFixture,
+) -> None:
+    await _stalled_at(app, gateway, hub, CURTAIN, 0.98)
+    for moves in (2, 4):
+        await _waited(clock)
+        await _ends(hub, gateway, clock, moves)
+        await _ends(hub, gateway, clock, moves + 1, at=0.98)
     await until(lambda: len(stalls) == 2)
     assert stalls[1].outcome is RetryOutcome.GAVE_UP
+    assert "backed off in each of 2 rounds" in caplog.text
+    assert _sent(gateway) == [0.99, 1.0, 0.99, 1.0]
+
+
+async def test_a_stop_event_during_a_delay_does_not_end_it_early(
+    hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, clock: ManualClock,
+) -> None:
+    await _stalled_at(app, gateway, hub, CURTAIN, 0.9)
+    await _pause(clock, 10.0)
+    gateway.emit(EventKind.MOTION_STOPPED, CURTAIN)
+    await _pause(clock, 9.5)
+    assert len(_moves(gateway)) == 1
+    await _pause(clock, 1.0)
+    await _end_move(hub, gateway, 2)
+    await _pause(clock, 3.5)
+    gateway.emit(EventKind.MOTION_STOPPED, CURTAIN)
+    await _pause(clock, 9.0)
     assert len(_moves(gateway)) == 2
+    await _pause(clock, 1.5)
+    await until(lambda: len(_moves(gateway)) == 3)
 
 
 async def test_a_step_without_motion_stopped_in_time_gives_up(
@@ -274,12 +310,12 @@ async def test_a_step_without_motion_stopped_in_time_gives_up(
     stalls: list[ShadeStalled],
 ) -> None:
     await _stalled_at(app, gateway, hub, CURTAIN, 0.9)
-    await _lowered(hub, gateway, clock, 2)
-    await until(lambda: len(_moves(gateway)) == 3)
+    await _waited(clock)
+    await until(lambda: len(_moves(gateway)) == 2)
     await _pause(clock, 45.0)
     await until(lambda: len(stalls) == 2)
     assert stalls[1].outcome is RetryOutcome.GAVE_UP
-    assert len(_moves(gateway)) == 3
+    assert len(_moves(gateway)) == 2
 
 
 @pytest.mark.parametrize("command", ["move", "move_cover", "stop", "jog"])
@@ -288,7 +324,7 @@ async def test_a_command_of_the_caller_during_a_retry_interrupts_it(
     stalls: list[ShadeStalled], command: str,
 ) -> None:
     await _stalled_at(app, gateway, hub, CURTAIN, 0.9)
-    await until(lambda: len(_moves(gateway)) == 2)
+    await until(lambda: len(stalls) == 1)
     match command:
         case "move":
             await hub.move(CURTAIN, {P: 0.5})
@@ -311,20 +347,20 @@ async def test_a_move_from_the_app_during_a_retry_interrupts_it(
     stalls: list[ShadeStalled],
 ) -> None:
     await _stalled_at(app, gateway, hub, CURTAIN, 0.9)
-    await _lowered(hub, gateway, clock, 2)
-    await until(lambda: len(_moves(gateway)) == 3)
+    await _waited(clock)
+    await until(lambda: len(_moves(gateway)) == 2)
     await app.set_positions([CURTAIN], primary=0.2)
     await until(lambda: len(stalls) == 2)
     assert stalls[1].outcome is RetryOutcome.INTERRUPTED
     await _pause(clock, 30.0)
-    assert len(_moves(gateway)) == 4
+    assert len(_moves(gateway)) == 3
 
 
 async def test_a_shade_going_offline_during_a_retry_interrupts_it(
     hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, stalls: list[ShadeStalled],
 ) -> None:
     await _stalled_at(app, gateway, hub, CURTAIN, 0.9)
-    await until(lambda: len(_moves(gateway)) == 2)
+    await until(lambda: len(stalls) == 1)
     gateway.set_online(CURTAIN, False)
     await until(lambda: len(stalls) == 2)
     assert stalls[1].outcome is RetryOutcome.INTERRUPTED
@@ -334,7 +370,7 @@ async def test_a_shade_removed_from_the_home_during_a_retry_interrupts_it(
     hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, stalls: list[ShadeStalled],
 ) -> None:
     await _stalled_at(app, gateway, hub, CURTAIN, 0.9)
-    await until(lambda: len(_moves(gateway)) == 2)
+    await until(lambda: len(stalls) == 1)
     gateway.remove_shade(CURTAIN)
     await hub.refresh()
     await hub.refresh()
@@ -344,12 +380,14 @@ async def test_a_shade_removed_from_the_home_during_a_retry_interrupts_it(
 
 
 async def test_a_step_the_gateway_refuses_gives_up(
-    hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, stalls: list[ShadeStalled],
+    hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, clock: ManualClock,
+    stalls: list[ShadeStalled],
 ) -> None:
     await app.set_positions([CURTAIN], primary=1.0)
     await until(lambda: hub.shade(CURTAIN).moving)
     gateway.command_errors[CURTAIN] = 7
     gateway.finish(CURTAIN, at={P: 0.9})
+    await _waited(clock)
     await until(lambda: len(stalls) == 2)
     with pytest.raises(CommandError):
         await app.set_positions([CURTAIN], primary=1.0)
@@ -358,13 +396,15 @@ async def test_a_step_the_gateway_refuses_gives_up(
 
 async def test_an_unexpected_error_in_a_retry_is_logged_and_the_hub_goes_on(
     hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient,
-    stalls: list[ShadeStalled], monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+    clock: ManualClock, stalls: list[ShadeStalled], monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     async def fail(*_: object) -> None:
         raise RuntimeError("broken")
 
     monkeypatch.setattr(PowerViewClient, "set_positions", fail)
     await _stalled_at_without_moving(gateway, hub, CURTAIN, 0.9)
+    await _waited(clock)
     await until(lambda: len(stalls) == 2)
     assert stalls[1].outcome is RetryOutcome.GAVE_UP
     assert "Retrying shade 271 failed" in caplog.text
@@ -469,7 +509,7 @@ async def test_turning_another_cover_retry_off_leaves_one_in_progress_running(
     stalls: list[ShadeStalled],
 ) -> None:
     await _stalled_at(app, gateway, hub, TDBU, 0.9)
-    await until(lambda: len(_moves(gateway)) == 2)
+    await until(lambda: len(stalls) == 1)
     hub.set_stalled_open_retry(TDBU, CoverRole.TOP, None)
     await asyncio.sleep(0.05)
     assert [stall.outcome for stall in stalls] == [RetryOutcome.STARTED]
@@ -492,31 +532,30 @@ async def test_turning_retry_off_ends_one_in_progress_and_raises_no_more(
     stalls: list[ShadeStalled],
 ) -> None:
     await _stalled_at(app, gateway, hub, CURTAIN, 0.9)
-    await until(lambda: len(_moves(gateway)) == 2)
+    await until(lambda: len(stalls) == 1)
     hub.set_stalled_open_retry(CURTAIN, CoverRole.SHADE, None)
     await until(lambda: len(stalls) == 2)
     assert stalls[1].outcome is RetryOutcome.INTERRUPTED
     await _stalled_at(app, gateway, hub, CURTAIN, 0.85)
     await _pause(clock, 30.0)
-    assert len(stalls) == 2 and len(_moves(gateway)) == 3
+    assert len(stalls) == 2 and len(_moves(gateway)) == 2
 
 
 async def test_settings_changed_while_running_apply_to_the_next_stall(
     hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, clock: ManualClock,
     stalls: list[ShadeStalled],
 ) -> None:
-    settings = StalledOpenRetry(min_openness=0.95, lower_by=0.2, steps=1, delay=0.0)
+    settings = StalledOpenRetry(min_openness=0.95, wait=0.0, attempts=1, rounds=1, delay=0.0)
     hub.set_stalled_open_retry(CURTAIN, CoverRole.SHADE, settings)
     assert hub.stalled_open_retry(CURTAIN, CoverRole.SHADE) == settings
     await _stalled_at(app, gateway, hub, CURTAIN, 0.9)
     await asyncio.sleep(0.05)
     assert stalls == []
     await _stalled_at(app, gateway, hub, CURTAIN, 0.96)
-    await _lowered(hub, gateway, clock, 3)
-    await _end_move(hub, gateway, 4)
-    await _pause(clock, 0.5)
+    await _ends(hub, gateway, clock, 3)
+    await _ends(hub, gateway, clock, 4)
     await until(lambda: len(stalls) == 2)
-    assert _sent(gateway)[-2:] == [0.76, 1.0]
+    assert _sent(gateway)[-2:] == [0.99, 1.0]
     assert stalls[1].outcome is RetryOutcome.OPENED
 
 
@@ -558,10 +597,10 @@ async def test_a_retry_ends_interrupted_when_run_is_cancelled(
     changes: list[Change] = []
     hub.subscribe(changes.append)
     await _stalled_at(app, gateway, hub, CURTAIN, 0.9)
-    await until(lambda: len(_moves(gateway)) == 2)
+    await until(lambda: any(isinstance(change, ShadeStalled) for change in changes))
     await _stop(task)
     stalls = [change for change in changes if isinstance(change, ShadeStalled)]
     assert [stall.outcome for stall in stalls] == [RetryOutcome.STARTED,
                                                    RetryOutcome.INTERRUPTED]
-    assert "Shade 271 (Patio Curtain) stalled at 0.90" in caplog.text
+    assert "Shade 271 (Patio Curtain) stopped at 0.90" in caplog.text
     assert "SIM:" not in caplog.text

@@ -77,30 +77,29 @@ def test_a_lower_lowest_stuck_openness_counts_lower_stops() -> None:
     assert stalled_cover(CURTAIN, {P: 1.0}, {P: 0.5}, StalledOpenRetry(min_openness=0.5)) is not None
 
 
-def test_the_steps_split_what_is_left_evenly_and_end_fully_open() -> None:
-    assert retry_steps(0.85, 3) == [0.9, 0.95, 1.0]
-    assert retry_steps(0.8, 2) == [0.9, 1.0]
-    assert retry_steps(0.85, 1) == [1.0]
+def test_the_steps_go_two_thirds_and_five_sixths_of_the_way_and_end_fully_open() -> None:
+    assert retry_steps(0.8) == [0.93, 0.97, 1.0]
+    assert retry_steps(0.95) == [0.98, 0.99, 1.0]
 
 
 def test_steps_that_would_not_move_the_cover_are_left_out() -> None:
-    assert retry_steps(0.99, 3) == [1.0]
+    assert retry_steps(0.98) == [0.99, 1.0]
+    assert retry_steps(0.99) == [1.0]
 
 
-@pytest.mark.parametrize(("min_openness", "lower_by", "steps", "delay"), [
-    (-0.1, 0.1, 3, 90.0), (1.0, 0.1, 3, 90.0), (0.8, 0.0, 3, 90.0), (0.8, 1.1, 3, 90.0),
-    (0.8, 0.1, 0, 90.0), (0.8, 0.1, 3, -1.0)])
-def test_retry_settings_that_cannot_work_are_refused(
-    min_openness: float, lower_by: float, steps: int, delay: float
-) -> None:
+@pytest.mark.parametrize("wrong", [
+    {"min_openness": -0.1}, {"min_openness": 1.0}, {"wait": -1.0}, {"attempts": 0},
+    {"rounds": 0}, {"delay": -1.0}])
+def test_retry_settings_that_cannot_work_are_refused(wrong: dict[str, Any]) -> None:
     with pytest.raises(ValueError):
-        StalledOpenRetry(min_openness=min_openness, lower_by=lower_by, steps=steps, delay=delay)
+        StalledOpenRetry(**wrong)
 
 
-def test_a_retry_lowers_a_tenth_and_raises_in_three_steps_unless_told_otherwise() -> None:
-    assert StalledOpenRetry() == StalledOpenRetry(min_openness=0.8, lower_by=0.1, steps=3,
-                                                  delay=90.0)
-    assert StalledOpenRetry(min_openness=0.0, lower_by=1.0, steps=1, delay=0.0).steps == 1
+def test_a_retry_waits_five_and_a_half_minutes_and_tries_five_times_in_three_rounds() -> None:
+    assert StalledOpenRetry() == StalledOpenRetry(min_openness=0.8, wait=330.0, attempts=5,
+                                                  rounds=3, delay=300.0)
+    assert StalledOpenRetry(min_openness=0.0, wait=0.0, attempts=1, rounds=1,
+                            delay=0.0).rounds == 1
 
 
 def test_only_pleated_covers_that_open_upwards_are_retryable() -> None:
