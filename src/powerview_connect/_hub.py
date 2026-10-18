@@ -882,7 +882,8 @@ class PowerViewHub:
                 continue
             # One retry per stalled move: its own moves' stops are not looked at again.
             tracker.last_target = {}
-            self._active[shade_id] = active = _ActiveRetry(cover)
+            active = _ActiveRetry(cover, heard_at=self._clock.monotonic())
+            self._active[shade_id] = active
             self._log.warning("Shade %s (%s) stopped at %.2f of fully open; retrying its %s "
                               "cover", shade_id, self._name(shade_id), openness, cover.role)
             self._emit_stall(shade_id, cover, openness, RetryOutcome.STARTED)
@@ -934,40 +935,32 @@ class PowerViewHub:
         name = self._name(shade_id)
         reached = start
         for round_ in range(1, settings.rounds + 1):
-            self._log.warning("Shade %s (%s) at %.2f: round %d of %d starts in %.0f s",
-                              shade_id, name, reached, round_, settings.rounds, settings.wait)
-            await self._pause(active, settings.wait)
+            # A motor that stopped short can still be backing off.
+            await self._wait_quiet(active, self._timing.retry_settle)
+            now = self._cover_openness(shade_id, active.cover)
+            reached = reached if now is None else now
+            self._log.warning("Shade %s (%s) backed off to %.2f: round %d of %d, lowering it to "
+                              "%.2f", shade_id, name, reached, round_, settings.rounds,
+                              settings.lower_to)
+            # The steps go up from where the motor backed off to, not from where it is lowered.
             steps = retry_steps(reached)
-            reached = await self._first_step(shade_id, active, steps, settings.attempts)
-            for number, openness in enumerate(steps[1:], start=2):
-                self._log.warning("Shade %s (%s) held at %.2f; step %d of %d to %.2f in %.0f s",
-                                  shade_id, name, reached, number, len(steps), openness,
-                                  settings.delay)
-                await self._pause(active, settings.delay)
+            if reached > settings.lower_to + STEP:
+                reached = await self._step(shade_id, active, settings.lower_to)
+            for number, openness in enumerate(steps, start=1):
+                self._log.warning("Shade %s (%s) at %.2f: step %d of %d to %.2f", shade_id,
+                                  name, reached, number, len(steps), openness)
                 reached = await self._step(shade_id, active, openness)
                 if reached < openness - STEP:
                     self._log.warning("Shade %s (%s) backed off from step %d of %d to %.2f",
                                       shade_id, name, number, len(steps), reached)
                     break
+                if number < len(steps):
+                    self._log.warning("Shade %s (%s) held at %.2f; next step in %.0f s",
+                                      shade_id, name, reached, settings.delay)
+                    await self._pause(active, settings.delay)
             else:
                 return RetryOutcome.OPENED
         raise _GaveUp(f"backed off in each of {settings.rounds} rounds")
-
-    async def _first_step(self, shade_id: int, active: _ActiveRetry, steps: list[float],
-                          attempts: int) -> float:
-        """Send the first of `steps` again each time the motor backs off from it; returns how
-        far the cover is open once it held, and raises `_GaveUp` where it did not in `attempts`
-        attempts."""
-        name, openness = self._name(shade_id), steps[0]
-        for attempt in range(1, attempts + 1):
-            self._log.warning("Shade %s (%s): step 1 of %d to %.2f, attempt %d of %d",
-                              shade_id, name, len(steps), openness, attempt, attempts)
-            reached = await self._step(shade_id, active, openness)
-            if reached >= openness - STEP:
-                return reached
-            self._log.warning("Shade %s (%s) backed off from step 1 to %.2f", shade_id, name,
-                              reached)
-        raise _GaveUp(f"the motor backed off from {openness:.2f} in each of {attempts} attempts")
 
     async def _step(self, shade_id: int, active: _ActiveRetry, openness: float) -> float:
         """Move the cover to `openness`, wait for its stop and for any backing off to end;

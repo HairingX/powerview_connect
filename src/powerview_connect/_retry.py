@@ -14,20 +14,18 @@ from ._motion import STEP
 class StalledOpenRetry:
     """How a cover sent fully open whose motor backed off short of the top is opened after all.
 
-    A cover sent fully open that ends at `min_openness` or above, short of the top, is left
-    `wait` seconds, then raised in three steps: two thirds of the way to the top, five sixths,
-    and fully open. The first step is sent again, up to `attempts` times in all, each time the
-    motor backs off from it; after each step that holds, the cover is left `delay` seconds. A
-    later step the motor backs off from starts a new round, up to `rounds` in all.
+    A cover sent fully open that ends at `min_openness` or above, short of the top, is lowered to
+    `lower_to` and raised in three steps, worked out from where the motor backed off to: two
+    thirds of the way from there to the top, five sixths, and fully open, with `delay` seconds
+    after each step that held. A step the motor backs off from
+    starts a new round, up to `rounds` in all.
     """
 
     min_openness: float = 0.8
     """The lowest openness counted as backed off; a stop below it is taken as meant."""
-    wait: float = 330.0
-    """Seconds after the motor backed off before the first step of a round: steps sent 13 s and
-    158 s after were refused."""
-    attempts: int = 5
-    """How many times the first step of a round is sent at most."""
+    lower_to: float = 0.8
+    """Where the cover is lowered to first: a motor that backed off was seen to take an opening
+    from 0.81, and to refuse one from 0.85 and above."""
     rounds: int = 3
     """How many rounds are started at most."""
     delay: float = 300.0
@@ -37,13 +35,13 @@ class StalledOpenRetry:
         """Refuse settings that cannot work.
 
         Raises:
-            ValueError: `min_openness` is outside 0.0 to below 1.0, `attempts` or `rounds` is
-                below 1, or `wait` or `delay` is negative.
+            ValueError: `min_openness` or `lower_to` is outside 0.0 to below 1.0, `rounds` is
+                below 1, or `delay` is negative.
         """
-        if not 0.0 <= self.min_openness < 1.0:
-            raise ValueError(f"min_openness runs from 0.0 to below 1.0: {self}")
-        if min(self.attempts, self.rounds) < 1 or min(self.wait, self.delay) < 0:
-            raise ValueError(f"attempts and rounds start at 1, wait and delay at 0: {self}")
+        if not (0.0 <= self.min_openness < 1.0 and 0.0 <= self.lower_to < 1.0):
+            raise ValueError(f"min_openness and lower_to run from 0.0 to below 1.0: {self}")
+        if self.rounds < 1 or self.delay < 0:
+            raise ValueError(f"rounds starts at 1 and delay at 0: {self}")
 
 
 class RetryOutcome(StrEnum):
