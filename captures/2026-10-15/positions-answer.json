@@ -1,0 +1,12 @@
+{
+  "err": 0,
+  "responses": [
+    {
+      "bleName": "DU1:0154",
+      "err": 0,
+      "id": 154,
+      "hex": "e701"
+    }
+  ],
+  "wentViaHTTP": true
+}

@@ -46,7 +46,8 @@ class Capabilities(IntEnum):
 class BatteryStatus(IntEnum):
     """A shade's battery, as the gateway's `batteryStatus` number says.
 
-    As Hunter Douglas's Gen 3 API describes it; a hard-wired shade was measured to report HIGH.
+    The API description gives the number only as a rough gauge from 0 to 3, so these meanings are
+    not verified; hard-wired shades were measured to report HIGH, or LOW for type 6.
     """
 
     UNKNOWN = 0

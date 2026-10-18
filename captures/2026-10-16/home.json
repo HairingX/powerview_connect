@@ -1,0 +1,2363 @@
+{
+  "_schemaVersion": 32,
+  "createdBy": "LXIT",
+  "hkHome": "p",
+  "id": "home-0001",
+  "modApp": "IOS: com.hunterdouglas.powerview v16915",
+  "controllers": [],
+  "createdDate": {
+    "seconds": 1709577334,
+    "nanoseconds": 594000000
+  },
+  "gateways": [
+    {
+      "radio1V": "3.0.43",
+      "_id": 134,
+      "ssid": "",
+      "name": "Bedroom Gateway",
+      "mac": "00:00:5E:00:53:30",
+      "v": "3.2.59",
+      "ip": "192.0.2.30",
+      "radio2V": "3.0.43",
+      "aux": true,
+      "shd_Ids": [
+        274,
+        231,
+        277,
+        163
+      ],
+      "serial": "gateway-134",
+      "model": "Pro"
+    },
+    {
+      "mac": "00:00:5E:00:53:31",
+      "name": "Hall Gateway",
+      "ssid": "",
+      "ip": "192.0.2.31",
+      "radio1V": "3.0.43",
+      "_id": 135,
+      "serial": "gateway-135",
+      "radio2V": "3.0.43",
+      "shd_Ids": [
+        256,
+        248,
+        259,
+        253,
+        265,
+        262
+      ],
+      "aux": true,
+      "v": "3.2.59",
+      "model": "Pro"
+    },
+    {
+      "v": "3.2.59",
+      "radio1V": "3.0.43",
+      "ip": "192.0.2.32",
+      "mac": "00:00:5E:00:53:32",
+      "_id": 132,
+      "name": "Main Room Gateway",
+      "aux": false,
+      "ssid": "",
+      "model": "Pro",
+      "shd_Ids": [
+        223,
+        227,
+        154,
+        218,
+        150,
+        271
+      ],
+      "serial": "gateway-132",
+      "radio2V": "3.0.43"
+    },
+    {
+      "radio1V": "3.0.43",
+      "name": "Room 4 Gateway",
+      "ip": "192.0.2.33",
+      "mac": "00:00:5E:00:53:33",
+      "ssid": "IOT",
+      "_id": 213,
+      "v": "3.2.59",
+      "aux": true,
+      "radio2V": "",
+      "shd_Ids": [
+        283,
+        268,
+        280
+      ],
+      "model": "Std",
+      "serial": "gateway-213"
+    }
+  ],
+  "rooms": [
+    {
+      "groups": [],
+      "_id": 18,
+      "color": "0",
+      "type": 0,
+      "shades": [
+        {
+          "id": 259,
+          "type": 6,
+          "name": "QmF0aHJvb20gMSBDdXJ0YWlu",
+          "ptName": "Bathroom 1 Curtain",
+          "motion": null,
+          "capabilities": 0,
+          "powerType": 1,
+          "batteryStatus": 1,
+          "roomId": 18,
+          "firmware": {
+            "revision": 3,
+            "subRevision": 0,
+            "build": 391
+          },
+          "positions": {
+            "primary": 0,
+            "secondary": 0,
+            "tilt": 1,
+            "velocity": 0
+          },
+          "signalStrength": -80,
+          "bleName": "DUT:0259",
+          "shadeGroupIds": [],
+          "serialNumber": "0000000000000259"
+        }
+      ],
+      "icon": "108",
+      "name": "Bathroom 1"
+    },
+    {
+      "shades": [
+        {
+          "id": 163,
+          "type": 8,
+          "name": "QmF0aHJvb20gMiBDdXJ0YWlu",
+          "ptName": "Bathroom 2 Curtain",
+          "motion": null,
+          "capabilities": 7,
+          "powerType": 1,
+          "batteryStatus": 3,
+          "roomId": 162,
+          "firmware": {
+            "revision": 3,
+            "subRevision": 0,
+            "build": 433
+          },
+          "positions": {
+            "primary": 0,
+            "secondary": 0,
+            "tilt": 0,
+            "velocity": 0
+          },
+          "signalStrength": -69,
+          "bleName": "DU1:0163",
+          "shadeGroupIds": [],
+          "serialNumber": "0000000000000163"
+        }
+      ],
+      "name": "Bathroom 2",
+      "color": "0",
+      "icon": "108",
+      "_id": 162,
+      "type": 0,
+      "groups": []
+    },
+    {
+      "_id": 50,
+      "type": 0,
+      "shades": [
+        {
+          "id": 277,
+          "type": 6,
+          "name": "QmVkcm9vbSBSaWdodCBDdXJ0YWlu",
+          "ptName": "Bedroom Right Curtain",
+          "motion": null,
+          "capabilities": 0,
+          "powerType": 1,
+          "batteryStatus": 1,
+          "roomId": 50,
+          "firmware": {
+            "revision": 3,
+            "subRevision": 0,
+            "build": 391
+          },
+          "positions": {
+            "primary": 0,
+            "secondary": 0,
+            "tilt": 1,
+            "velocity": 0
+          },
+          "signalStrength": -75,
+          "bleName": "DUT:0277",
+          "shadeGroupIds": [],
+          "serialNumber": "0000000000000277"
+        },
+        {
+          "id": 274,
+          "type": 6,
+          "name": "QmVkcm9vbSBMZWZ0IEN1cnRhaW4=",
+          "ptName": "Bedroom Left Curtain",
+          "motion": null,
+          "capabilities": 0,
+          "powerType": 1,
+          "batteryStatus": 1,
+          "roomId": 50,
+          "firmware": {
+            "revision": 3,
+            "subRevision": 0,
+            "build": 391
+          },
+          "positions": {
+            "primary": 0,
+            "secondary": 0,
+            "tilt": 1,
+            "velocity": 0
+          },
+          "signalStrength": -70,
+          "bleName": "DUT:0274",
+          "shadeGroupIds": [],
+          "serialNumber": "0000000000000274"
+        }
+      ],
+      "icon": "12",
+      "name": "Bedroom",
+      "groups": [],
+      "color": "10"
+    },
+    {
+      "type": 0,
+      "groups": [],
+      "name": "Hall",
+      "_id": 29,
+      "icon": "180",
+      "shades": [
+        {
+          "id": 256,
+          "type": 6,
+          "name": "SGFsbCBMZWZ0IEN1cnRhaW4=",
+          "ptName": "Hall Left Curtain",
+          "motion": null,
+          "capabilities": 0,
+          "powerType": 1,
+          "batteryStatus": 1,
+          "roomId": 29,
+          "firmware": {
+            "revision": 3,
+            "subRevision": 0,
+            "build": 391
+          },
+          "positions": {
+            "primary": 0,
+            "secondary": 0,
+            "tilt": 1,
+            "velocity": 0
+          },
+          "signalStrength": -58,
+          "bleName": "DUT:0256",
+          "shadeGroupIds": [],
+          "serialNumber": "0000000000000256"
+        },
+        {
+          "id": 248,
+          "type": 6,
+          "name": "SGFsbCBSaWdodCBDdXJ0YWlu",
+          "ptName": "Hall Right Curtain",
+          "motion": null,
+          "capabilities": 0,
+          "powerType": 1,
+          "batteryStatus": 1,
+          "roomId": 29,
+          "firmware": {
+            "revision": 3,
+            "subRevision": 0,
+            "build": 391
+          },
+          "positions": {
+            "primary": 0,
+            "secondary": 0,
+            "tilt": 1,
+            "velocity": 0
+          },
+          "signalStrength": -48,
+          "bleName": "DUT:0248",
+          "shadeGroupIds": [],
+          "serialNumber": "0000000000000248"
+        }
+      ],
+      "color": "0"
+    },
+    {
+      "_id": 59,
+      "type": 0,
+      "groups": [],
+      "icon": "116",
+      "color": "4",
+      "name": "Laundry Room",
+      "shades": [
+        {
+          "id": 268,
+          "type": 6,
+          "name": "TGF1bmRyeSBSb29tIEN1cnRhaW4=",
+          "ptName": "Laundry Room Curtain",
+          "motion": null,
+          "capabilities": 0,
+          "powerType": 1,
+          "batteryStatus": 1,
+          "roomId": 59,
+          "firmware": {
+            "revision": 3,
+            "subRevision": 0,
+            "build": 391
+          },
+          "positions": {
+            "primary": 0,
+            "secondary": 0,
+            "tilt": 1,
+            "velocity": 0
+          },
+          "signalStrength": -79,
+          "bleName": "DUT:0268",
+          "shadeGroupIds": [],
+          "serialNumber": "0000000000000268"
+        }
+      ]
+    },
+    {
+      "type": 0,
+      "shades": [
+        {
+          "id": 218,
+          "type": 8,
+          "name": "TGl2aW5nIFJvb20gTGVmdCBDdXJ0YWlu",
+          "ptName": "Living Room Left Curtain",
+          "motion": null,
+          "capabilities": 7,
+          "powerType": 1,
+          "batteryStatus": 3,
+          "roomId": 65,
+          "firmware": {
+            "revision": 3,
+            "subRevision": 0,
+            "build": 433
+          },
+          "positions": {
+            "primary": 0,
+            "secondary": 0,
+            "tilt": 0,
+            "velocity": 0
+          },
+          "signalStrength": -71,
+          "bleName": "DU1:0218",
+          "shadeGroupIds": [],
+          "serialNumber": "0000000000000218"
+        },
+        {
+          "id": 223,
+          "type": 8,
+          "name": "TGl2aW5nIFJvb20gUmlnaHQgQ3VydGFpbg==",
+          "ptName": "Living Room Right Curtain",
+          "motion": null,
+          "capabilities": 7,
+          "powerType": 1,
+          "batteryStatus": 3,
+          "roomId": 65,
+          "firmware": {
+            "revision": 3,
+            "subRevision": 0,
+            "build": 433
+          },
+          "positions": {
+            "primary": 0,
+            "secondary": 0,
+            "tilt": 0,
+            "velocity": 0
+          },
+          "signalStrength": -70,
+          "bleName": "DU1:0223",
+          "shadeGroupIds": [],
+          "serialNumber": "0000000000000223"
+        },
+        {
+          "id": 271,
+          "type": 6,
+          "name": "TGl2aW5nIFJvb20gRWFzdCBDdXJ0YWlu",
+          "ptName": "Living Room East Curtain",
+          "motion": null,
+          "capabilities": 0,
+          "powerType": 1,
+          "batteryStatus": 1,
+          "roomId": 65,
+          "firmware": {
+            "revision": 3,
+            "subRevision": 0,
+            "build": 391
+          },
+          "positions": {
+            "primary": 0,
+            "secondary": 0,
+            "tilt": 1,
+            "velocity": 0
+          },
+          "signalStrength": -77,
+          "bleName": "DUT:0271",
+          "shadeGroupIds": [],
+          "serialNumber": "0000000000000271"
+        },
+        {
+          "id": 227,
+          "type": 8,
+          "name": "S2l0Y2hlbiBMZWZ0IEN1cnRhaW4=",
+          "ptName": "Kitchen Left Curtain",
+          "motion": null,
+          "capabilities": 7,
+          "powerType": 1,
+          "batteryStatus": 3,
+          "roomId": 65,
+          "firmware": {
+            "revision": 3,
+            "subRevision": 0,
+            "build": 433
+          },
+          "positions": {
+            "primary": 0,
+            "secondary": 0,
+            "tilt": 0,
+            "velocity": 0
+          },
+          "signalStrength": -69,
+          "bleName": "DU1:0227",
+          "shadeGroupIds": [],
+          "serialNumber": "0000000000000227"
+        },
+        {
+          "id": 154,
+          "type": 8,
+          "name": "S2l0Y2hlbiBNaWRkbGUgQ3VydGFpbg==",
+          "ptName": "Kitchen Middle Curtain",
+          "motion": null,
+          "capabilities": 7,
+          "powerType": 1,
+          "batteryStatus": 3,
+          "roomId": 65,
+          "firmware": {
+            "revision": 3,
+            "subRevision": 0,
+            "build": 433
+          },
+          "positions": {
+            "primary": 0,
+            "secondary": 0,
+            "tilt": 0,
+            "velocity": 0
+          },
+          "signalStrength": -65,
+          "bleName": "DU1:0154",
+          "shadeGroupIds": [],
+          "serialNumber": "0000000000000154"
+        },
+        {
+          "id": 150,
+          "type": 8,
+          "name": "S2l0Y2hlbiBSaWdodCBDdXJ0YWlu",
+          "ptName": "Kitchen Right Curtain",
+          "motion": null,
+          "capabilities": 7,
+          "powerType": 1,
+          "batteryStatus": 3,
+          "roomId": 65,
+          "firmware": {
+            "revision": 3,
+            "subRevision": 0,
+            "build": 433
+          },
+          "positions": {
+            "primary": 0,
+            "secondary": 0,
+            "tilt": 0,
+            "velocity": 0
+          },
+          "signalStrength": -64,
+          "bleName": "DU1:0150",
+          "shadeGroupIds": [],
+          "serialNumber": "0000000000000150"
+        }
+      ],
+      "name": "Main Room",
+      "groups": [],
+      "icon": "100",
+      "color": "15",
+      "_id": 65
+    },
+    {
+      "name": "Room 1",
+      "shades": [
+        {
+          "id": 253,
+          "type": 6,
+          "name": "Um9vbSAxIEN1cnRhaW4=",
+          "ptName": "Room 1 Curtain",
+          "motion": null,
+          "capabilities": 0,
+          "powerType": 1,
+          "batteryStatus": 1,
+          "roomId": 7,
+          "firmware": {
+            "revision": 3,
+            "subRevision": 0,
+            "build": 391
+          },
+          "positions": {
+            "primary": 0,
+            "secondary": 0,
+            "tilt": 1,
+            "velocity": 0
+          },
+          "signalStrength": -82,
+          "bleName": "DUT:0253",
+          "shadeGroupIds": [],
+          "serialNumber": "0000000000000253"
+        }
+      ],
+      "icon": "103",
+      "type": 0,
+      "color": "9",
+      "_id": 7,
+      "groups": []
+    },
+    {
+      "_id": 13,
+      "groups": [],
+      "color": "14",
+      "type": 0,
+      "shades": [
+        {
+          "id": 265,
+          "type": 6,
+          "name": "Um9vbSAyIEN1cnRhaW4=",
+          "ptName": "Room 2 Curtain",
+          "motion": null,
+          "capabilities": 0,
+          "powerType": 1,
+          "batteryStatus": 1,
+          "roomId": 13,
+          "firmware": {
+            "revision": 3,
+            "subRevision": 0,
+            "build": 391
+          },
+          "positions": {
+            "primary": 0,
+            "secondary": 0,
+            "tilt": 1,
+            "velocity": 0
+          },
+          "signalStrength": -74,
+          "bleName": "DUT:0265",
+          "shadeGroupIds": [],
+          "serialNumber": "0000000000000265"
+        }
+      ],
+      "icon": "49",
+      "name": "Room 2"
+    },
+    {
+      "_id": 1,
+      "groups": [],
+      "color": "11",
+      "type": 0,
+      "shades": [
+        {
+          "id": 262,
+          "type": 6,
+          "name": "Um9vbSAzIEN1cnRhaW4=",
+          "ptName": "Room 3 Curtain",
+          "motion": null,
+          "capabilities": 0,
+          "powerType": 1,
+          "batteryStatus": 1,
+          "roomId": 1,
+          "firmware": {
+            "revision": 3,
+            "subRevision": 0,
+            "build": 391
+          },
+          "positions": {
+            "primary": 0,
+            "secondary": 0,
+            "tilt": 1,
+            "velocity": 0
+          },
+          "signalStrength": -78,
+          "bleName": "DUT:0262",
+          "shadeGroupIds": [],
+          "serialNumber": "0000000000000262"
+        }
+      ],
+      "icon": "123",
+      "name": "Room 3"
+    },
+    {
+      "name": "Room 4",
+      "icon": "59",
+      "shades": [
+        {
+          "id": 280,
+          "type": 6,
+          "name": "Um9vbSA0IEN1cnRhaW4=",
+          "ptName": "Room 4 Curtain",
+          "motion": null,
+          "capabilities": 0,
+          "powerType": 1,
+          "batteryStatus": 1,
+          "roomId": 38,
+          "firmware": {
+            "revision": 3,
+            "subRevision": 0,
+            "build": 391
+          },
+          "positions": {
+            "primary": 0,
+            "secondary": 0,
+            "tilt": 1,
+            "velocity": 0
+          },
+          "signalStrength": -51,
+          "bleName": "DUT:0280",
+          "shadeGroupIds": [],
+          "serialNumber": "0000000000000280"
+        }
+      ],
+      "type": 0,
+      "color": "1",
+      "_id": 38,
+      "groups": []
+    },
+    {
+      "groups": [],
+      "color": "6",
+      "type": 0,
+      "_id": 44,
+      "icon": "47",
+      "shades": [
+        {
+          "id": 283,
+          "type": 6,
+          "name": "V2FsayBJbiBDdXJ0YWlu",
+          "ptName": "Walk In Curtain",
+          "motion": null,
+          "capabilities": 0,
+          "powerType": 1,
+          "batteryStatus": 1,
+          "roomId": 44,
+          "firmware": {
+            "revision": 3,
+            "subRevision": 0,
+            "build": 391
+          },
+          "positions": {
+            "primary": 0,
+            "secondary": 0,
+            "tilt": 1,
+            "velocity": 0
+          },
+          "signalStrength": -83,
+          "bleName": "DUT:0283",
+          "shadeGroupIds": [],
+          "serialNumber": "0000000000000283"
+        }
+      ],
+      "name": "Walk In"
+    },
+    {
+      "shades": [
+        {
+          "id": 231,
+          "type": 6,
+          "name": "U21hbGwgSGFsbCBDdXJ0YWlu",
+          "ptName": "Small Hall Curtain",
+          "motion": null,
+          "capabilities": 0,
+          "powerType": 1,
+          "batteryStatus": 1,
+          "roomId": 126,
+          "firmware": {
+            "revision": 3,
+            "subRevision": 0,
+            "build": 391
+          },
+          "positions": {
+            "primary": 0,
+            "secondary": 0,
+            "tilt": 1,
+            "velocity": 0
+          },
+          "signalStrength": -63,
+          "bleName": "DUT:0231",
+          "shadeGroupIds": [],
+          "serialNumber": "0000000000000231"
+        }
+      ],
+      "icon": "182",
+      "color": "8",
+      "_id": 126,
+      "name": "Small Hall",
+      "groups": [],
+      "type": 0
+    }
+  ],
+  "scenes": [
+    {
+      "modDate": {
+        "seconds": 1727258860,
+        "nanoseconds": 939903000
+      },
+      "members": [
+        {
+          "pos": {
+            "pos1": 10000
+          },
+          "_id": 333,
+          "shd_Id": 277
+        },
+        {
+          "_id": 324,
+          "shd_Id": 218,
+          "pos": {
+            "pos2": 10000,
+            "pos1": 0
+          }
+        },
+        {
+          "pos": {
+            "pos1": 0,
+            "pos2": 10000
+          },
+          "_id": 189,
+          "shd_Id": 150
+        },
+        {
+          "shd_Id": 256,
+          "pos": {
+            "pos1": 10000
+          },
+          "_id": 336
+        },
+        {
+          "shd_Id": 154,
+          "_id": 188,
+          "pos": {
+            "pos2": 10000,
+            "pos1": 0
+          }
+        },
+        {
+          "pos": {
+            "pos1": 10000
+          },
+          "_id": 338,
+          "shd_Id": 253
+        },
+        {
+          "_id": 326,
+          "pos": {
+            "pos1": 10000
+          },
+          "shd_Id": 274
+        },
+        {
+          "_id": 337,
+          "pos": {
+            "pos1": 10000
+          },
+          "shd_Id": 268
+        },
+        {
+          "_id": 339,
+          "pos": {
+            "pos1": 10000
+          },
+          "shd_Id": 248
+        },
+        {
+          "pos": {
+            "pos1": 10000
+          },
+          "_id": 327,
+          "shd_Id": 262
+        },
+        {
+          "pos": {
+            "pos1": 10000
+          },
+          "_id": 325,
+          "shd_Id": 231
+        },
+        {
+          "shd_Id": 259,
+          "_id": 334,
+          "pos": {
+            "pos1": 10000
+          }
+        },
+        {
+          "shd_Id": 227,
+          "_id": 332,
+          "pos": {
+            "pos2": 10000,
+            "pos1": 0
+          }
+        },
+        {
+          "pos": {
+            "pos2": 10000,
+            "pos1": 0
+          },
+          "_id": 329,
+          "shd_Id": 223
+        },
+        {
+          "shd_Id": 283,
+          "pos": {
+            "pos1": 10000
+          },
+          "_id": 330
+        },
+        {
+          "_id": 328,
+          "shd_Id": 280,
+          "pos": {
+            "pos1": 10000
+          }
+        },
+        {
+          "pos": {
+            "pos1": 10000
+          },
+          "shd_Id": 271,
+          "_id": 331
+        },
+        {
+          "pos": {
+            "pos1": 0,
+            "pos2": 10000
+          },
+          "_id": 183,
+          "shd_Id": 163
+        },
+        {
+          "shd_Id": 265,
+          "pos": {
+            "pos1": 10000
+          },
+          "_id": 335
+        }
+      ],
+      "name": "All Open",
+      "bleId": 16004,
+      "_id": 86,
+      "icon": "183",
+      "color": "15"
+    },
+    {
+      "modDate": {
+        "seconds": 1792094070,
+        "nanoseconds": 756585000
+      },
+      "name": "Morning",
+      "icon": "96",
+      "members": [
+        {
+          "shd_Id": 227,
+          "pos": {
+            "pos1": 7540,
+            "vel": 50,
+            "pos2": 0
+          },
+          "_id": 408
+        },
+        {
+          "_id": 412,
+          "shd_Id": 253,
+          "pos": {
+            "pos1": 10000,
+            "vel": 50
+          }
+        },
+        {
+          "pos": {
+            "pos1": 10000,
+            "vel": 50
+          },
+          "_id": 401,
+          "shd_Id": 259
+        },
+        {
+          "pos": {
+            "pos1": 10000,
+            "vel": 50
+          },
+          "_id": 403,
+          "shd_Id": 256
+        },
+        {
+          "pos": {
+            "pos2": 0,
+            "vel": 50,
+            "pos1": 7540
+          },
+          "_id": 414,
+          "shd_Id": 150
+        },
+        {
+          "pos": {
+            "pos1": 10000,
+            "vel": 50
+          },
+          "_id": 413,
+          "shd_Id": 271
+        },
+        {
+          "shd_Id": 274,
+          "pos": {
+            "vel": 50,
+            "pos1": 2742
+          },
+          "_id": 402
+        },
+        {
+          "pos": {
+            "vel": 50,
+            "pos1": 10000
+          },
+          "_id": 419,
+          "shd_Id": 280
+        },
+        {
+          "_id": 418,
+          "pos": {
+            "pos1": 2742,
+            "vel": 50
+          },
+          "shd_Id": 277
+        },
+        {
+          "shd_Id": 223,
+          "_id": 416,
+          "pos": {
+            "pos1": 7540,
+            "vel": 50,
+            "pos2": 0
+          }
+        },
+        {
+          "shd_Id": 262,
+          "_id": 417,
+          "pos": {
+            "vel": 50,
+            "pos1": 10000
+          }
+        },
+        {
+          "pos": {
+            "vel": 50,
+            "pos1": 10000
+          },
+          "_id": 410,
+          "shd_Id": 268
+        },
+        {
+          "shd_Id": 265,
+          "pos": {
+            "vel": 50,
+            "pos1": 10000
+          },
+          "_id": 406
+        },
+        {
+          "_id": 404,
+          "shd_Id": 283,
+          "pos": {
+            "pos1": 10000,
+            "vel": 50
+          }
+        },
+        {
+          "pos": {
+            "pos1": 10000,
+            "vel": 50
+          },
+          "_id": 411,
+          "shd_Id": 248
+        },
+        {
+          "shd_Id": 154,
+          "_id": 409,
+          "pos": {
+            "pos2": 0,
+            "pos1": 7540,
+            "vel": 50
+          }
+        },
+        {
+          "_id": 415,
+          "shd_Id": 163,
+          "pos": {
+            "pos1": 7307,
+            "vel": 50,
+            "pos2": 0
+          }
+        },
+        {
+          "shd_Id": 218,
+          "_id": 405,
+          "pos": {
+            "pos1": 7540,
+            "pos2": 0,
+            "vel": 50
+          }
+        },
+        {
+          "pos": {
+            "vel": 50,
+            "pos1": 2956
+          },
+          "_id": 407,
+          "shd_Id": 231
+        }
+      ],
+      "color": "0",
+      "bleId": 9211,
+      "_id": 400
+    },
+    {
+      "name": "Default",
+      "members": [
+        {
+          "pos": {
+            "pos1": 10000
+          },
+          "shd_Id": 231,
+          "_id": 365
+        },
+        {
+          "shd_Id": 268,
+          "pos": {
+            "pos1": 10000
+          },
+          "_id": 364
+        },
+        {
+          "pos": {
+            "pos1": 0,
+            "pos2": 10000
+          },
+          "_id": 369,
+          "shd_Id": 154
+        },
+        {
+          "pos": {
+            "pos1": 10000
+          },
+          "shd_Id": 262,
+          "_id": 375
+        },
+        {
+          "shd_Id": 218,
+          "_id": 370,
+          "pos": {
+            "pos2": 10000,
+            "pos1": 0
+          }
+        },
+        {
+          "shd_Id": 248,
+          "pos": {
+            "pos1": 10000
+          },
+          "_id": 380
+        },
+        {
+          "shd_Id": 271,
+          "pos": {
+            "pos1": 10000
+          },
+          "_id": 377
+        },
+        {
+          "_id": 382,
+          "pos": {
+            "pos1": 10000
+          },
+          "shd_Id": 280
+        },
+        {
+          "_id": 368,
+          "pos": {
+            "pos1": 10000
+          },
+          "shd_Id": 256
+        },
+        {
+          "pos": {
+            "pos1": 9460
+          },
+          "_id": 374,
+          "shd_Id": 253
+        },
+        {
+          "pos": {
+            "pos1": 10000
+          },
+          "shd_Id": 265,
+          "_id": 373
+        },
+        {
+          "pos": {
+            "pos1": 0,
+            "pos2": 10000
+          },
+          "shd_Id": 227,
+          "_id": 381
+        },
+        {
+          "_id": 367,
+          "shd_Id": 223,
+          "pos": {
+            "pos1": 0,
+            "pos2": 10000
+          }
+        },
+        {
+          "_id": 376,
+          "shd_Id": 259,
+          "pos": {
+            "pos1": 10000
+          }
+        },
+        {
+          "_id": 371,
+          "shd_Id": 277,
+          "pos": {
+            "pos1": 10000
+          }
+        },
+        {
+          "shd_Id": 274,
+          "pos": {
+            "pos1": 10000
+          },
+          "_id": 378
+        },
+        {
+          "_id": 372,
+          "pos": {
+            "pos1": 0,
+            "pos2": 10000
+          },
+          "shd_Id": 150
+        },
+        {
+          "shd_Id": 283,
+          "_id": 379,
+          "pos": {
+            "pos1": 10000
+          }
+        },
+        {
+          "_id": 366,
+          "pos": {
+            "pos1": 6520,
+            "pos2": 0
+          },
+          "shd_Id": 163
+        }
+      ],
+      "icon": "183",
+      "modDate": {
+        "seconds": 1744531747,
+        "nanoseconds": 391196000
+      },
+      "color": "15",
+      "_id": 363,
+      "bleId": 4823
+    },
+    {
+      "name": "All Close",
+      "icon": "185",
+      "modDate": {
+        "seconds": 1727259161,
+        "nanoseconds": 300580000
+      },
+      "color": "15",
+      "_id": 76,
+      "bleId": 17828,
+      "members": [
+        {
+          "pos": {
+            "pos1": 0
+          },
+          "_id": 353,
+          "shd_Id": 262
+        },
+        {
+          "shd_Id": 256,
+          "pos": {
+            "pos1": 0
+          },
+          "_id": 351
+        },
+        {
+          "pos": {
+            "pos1": 0,
+            "pos2": 0
+          },
+          "_id": 175,
+          "shd_Id": 163
+        },
+        {
+          "pos": {
+            "pos1": 0,
+            "pos2": 0
+          },
+          "shd_Id": 218,
+          "_id": 346
+        },
+        {
+          "shd_Id": 271,
+          "_id": 355,
+          "pos": {
+            "pos1": 0
+          }
+        },
+        {
+          "_id": 340,
+          "shd_Id": 280,
+          "pos": {
+            "pos1": 0
+          }
+        },
+        {
+          "_id": 342,
+          "shd_Id": 265,
+          "pos": {
+            "pos1": 0
+          }
+        },
+        {
+          "shd_Id": 253,
+          "pos": {
+            "pos1": 0
+          },
+          "_id": 344
+        },
+        {
+          "shd_Id": 154,
+          "pos": {
+            "pos1": 0,
+            "pos2": 0
+          },
+          "_id": 176
+        },
+        {
+          "_id": 354,
+          "pos": {
+            "pos2": 0,
+            "pos1": 0
+          },
+          "shd_Id": 223
+        },
+        {
+          "_id": 350,
+          "pos": {
+            "pos1": 0
+          },
+          "shd_Id": 259
+        },
+        {
+          "_id": 352,
+          "shd_Id": 268,
+          "pos": {
+            "pos1": 0
+          }
+        },
+        {
+          "shd_Id": 150,
+          "pos": {
+            "pos1": 0,
+            "pos2": 0
+          },
+          "_id": 179
+        },
+        {
+          "shd_Id": 274,
+          "pos": {
+            "pos1": 0
+          },
+          "_id": 348
+        },
+        {
+          "_id": 345,
+          "pos": {
+            "pos1": 0
+          },
+          "shd_Id": 248
+        },
+        {
+          "pos": {
+            "pos1": 0
+          },
+          "shd_Id": 283,
+          "_id": 349
+        },
+        {
+          "pos": {
+            "pos1": 0
+          },
+          "shd_Id": 231,
+          "_id": 347
+        },
+        {
+          "shd_Id": 227,
+          "_id": 343,
+          "pos": {
+            "pos2": 0,
+            "pos1": 0
+          }
+        },
+        {
+          "_id": 341,
+          "shd_Id": 277,
+          "pos": {
+            "pos1": 0
+          }
+        }
+      ]
+    },
+    {
+      "bleId": 45057,
+      "modDate": {
+        "seconds": 1727258823,
+        "nanoseconds": 268162000
+      },
+      "members": [
+        {
+          "pos": {
+            "pos1": 10000
+          },
+          "_id": 311,
+          "shd_Id": 259
+        }
+      ],
+      "color": "0",
+      "room_Id": 18,
+      "_id": 310,
+      "icon": "183",
+      "name": "Bathroom 1 Open"
+    },
+    {
+      "color": "0",
+      "modDate": {
+        "seconds": 1727258828,
+        "nanoseconds": 315335000
+      },
+      "icon": "185",
+      "_id": 308,
+      "members": [
+        {
+          "shd_Id": 259,
+          "_id": 309,
+          "pos": {
+            "pos1": 0
+          }
+        }
+      ],
+      "bleId": 45058,
+      "name": "Bathroom 1 Close",
+      "room_Id": 18
+    },
+    {
+      "bleId": 31696,
+      "color": "0",
+      "_id": 393,
+      "members": [
+        {
+          "_id": 394,
+          "pos": {
+            "pos2": 1300,
+            "pos1": 7070
+          },
+          "shd_Id": 163
+        }
+      ],
+      "icon": "186",
+      "room_Id": 162,
+      "modDate": {
+        "seconds": 1754918202,
+        "nanoseconds": 222213000
+      },
+      "name": "Bathroom 2 Default Summer"
+    },
+    {
+      "_id": 385,
+      "bleId": 38887,
+      "color": "0",
+      "modDate": {
+        "seconds": 1782411552,
+        "nanoseconds": 838653000
+      },
+      "icon": "186",
+      "members": [
+        {
+          "_id": 386,
+          "pos": {
+            "pos1": 1464,
+            "pos2": 0
+          },
+          "shd_Id": 163
+        }
+      ],
+      "name": "Bathroom 2 Top Light",
+      "room_Id": 162
+    },
+    {
+      "bleId": 6416,
+      "members": [
+        {
+          "_id": 171,
+          "pos": {
+            "pos1": 6521,
+            "pos2": 0
+          },
+          "shd_Id": 163
+        }
+      ],
+      "room_Id": 162,
+      "modDate": {
+        "seconds": 1754918216,
+        "nanoseconds": 408097000
+      },
+      "_id": 170,
+      "color": "0",
+      "icon": "186",
+      "name": "Bathroom 2 Default"
+    },
+    {
+      "_id": 168,
+      "icon": "108",
+      "name": "Bathroom 2 Shower",
+      "color": "0",
+      "room_Id": 162,
+      "members": [
+        {
+          "shd_Id": 163,
+          "_id": 169,
+          "pos": {
+            "pos1": 5019,
+            "pos2": 0
+          }
+        }
+      ],
+      "bleId": 45060,
+      "modDate": {
+        "seconds": 1754918223,
+        "nanoseconds": 606019000
+      }
+    },
+    {
+      "modDate": {
+        "seconds": 1725449576,
+        "nanoseconds": 762341000
+      },
+      "room_Id": 162,
+      "members": [
+        {
+          "shd_Id": 163,
+          "_id": 167,
+          "pos": {
+            "pos1": 0,
+            "pos2": 10000
+          }
+        }
+      ],
+      "bleId": 45057,
+      "name": "Bathroom 2 Open",
+      "icon": "183",
+      "color": "0",
+      "_id": 166
+    },
+    {
+      "room_Id": 162,
+      "members": [
+        {
+          "pos": {
+            "pos1": 0,
+            "pos2": 0
+          },
+          "shd_Id": 163,
+          "_id": 165
+        }
+      ],
+      "modDate": {
+        "seconds": 1725449558,
+        "nanoseconds": 152050000
+      },
+      "name": "Bathroom 2 Close",
+      "bleId": 45058,
+      "_id": 164,
+      "icon": "185",
+      "color": "0"
+    },
+    {
+      "room_Id": 50,
+      "_id": 294,
+      "members": [
+        {
+          "pos": {
+            "pos1": 10000
+          },
+          "_id": 297,
+          "shd_Id": 274
+        },
+        {
+          "pos": {
+            "pos1": 10000
+          },
+          "_id": 295,
+          "shd_Id": 277
+        }
+      ],
+      "modDate": {
+        "seconds": 1727258811,
+        "nanoseconds": 485651000
+      },
+      "bleId": 45057,
+      "icon": "183",
+      "name": "Bedroom Open",
+      "color": "10"
+    },
+    {
+      "name": "Bedroom Close",
+      "color": "10",
+      "bleId": 45058,
+      "icon": "185",
+      "modDate": {
+        "seconds": 1727258816,
+        "nanoseconds": 965877000
+      },
+      "_id": 292,
+      "members": [
+        {
+          "shd_Id": 274,
+          "_id": 296,
+          "pos": {
+            "pos1": 0
+          }
+        },
+        {
+          "pos": {
+            "pos1": 0
+          },
+          "_id": 293,
+          "shd_Id": 277
+        }
+      ],
+      "room_Id": 50
+    },
+    {
+      "members": [
+        {
+          "pos": {
+            "pos1": 10000
+          },
+          "shd_Id": 248,
+          "_id": 305
+        },
+        {
+          "pos": {
+            "pos1": 10000
+          },
+          "_id": 307,
+          "shd_Id": 256
+        }
+      ],
+      "room_Id": 29,
+      "bleId": 45057,
+      "modDate": {
+        "seconds": 1727258805,
+        "nanoseconds": 451555000
+      },
+      "color": "0",
+      "name": "Hall Open",
+      "icon": "183",
+      "_id": 304
+    },
+    {
+      "color": "0",
+      "icon": "185",
+      "members": [
+        {
+          "_id": 303,
+          "pos": {
+            "pos1": 0
+          },
+          "shd_Id": 248
+        },
+        {
+          "shd_Id": 256,
+          "pos": {
+            "pos1": 0
+          },
+          "_id": 306
+        }
+      ],
+      "room_Id": 29,
+      "_id": 302,
+      "modDate": {
+        "seconds": 1727258797,
+        "nanoseconds": 324059000
+      },
+      "bleId": 45058,
+      "name": "Hall Close"
+    },
+    {
+      "bleId": 45057,
+      "color": "4",
+      "members": [
+        {
+          "shd_Id": 268,
+          "pos": {
+            "pos1": 10000
+          },
+          "_id": 270
+        }
+      ],
+      "_id": 251,
+      "name": "Laundry Room Open",
+      "room_Id": 59,
+      "modDate": {
+        "seconds": 1727258791,
+        "nanoseconds": 675534000
+      },
+      "icon": "183"
+    },
+    {
+      "name": "Laundry Room Close",
+      "modDate": {
+        "seconds": 1727258786,
+        "nanoseconds": 478183000
+      },
+      "room_Id": 59,
+      "icon": "185",
+      "members": [
+        {
+          "shd_Id": 268,
+          "pos": {
+            "pos1": 0
+          },
+          "_id": 269
+        }
+      ],
+      "color": "4",
+      "_id": 249,
+      "bleId": 45058
+    },
+    {
+      "room_Id": 65,
+      "members": [
+        {
+          "shd_Id": 271,
+          "_id": 384,
+          "pos": {
+            "pos1": 10000
+          }
+        }
+      ],
+      "_id": 383,
+      "modDate": {
+        "seconds": 1744698495,
+        "nanoseconds": 45403000
+      },
+      "bleId": 2599,
+      "icon": "96",
+      "color": "15",
+      "name": "Main Room East Open"
+    },
+    {
+      "_id": 395,
+      "modDate": {
+        "seconds": 1779629507,
+        "nanoseconds": 50415000
+      },
+      "room_Id": 65,
+      "members": [
+        {
+          "_id": 397,
+          "pos": {
+            "pos1": 0,
+            "pos2": 3453
+          },
+          "shd_Id": 150
+        },
+        {
+          "shd_Id": 227,
+          "_id": 396,
+          "pos": {
+            "pos1": 0,
+            "pos2": 3453
+          }
+        }
+      ],
+      "bleId": 18309,
+      "icon": "182",
+      "name": "Main Room Plant Light",
+      "color": "7"
+    },
+    {
+      "_id": 122,
+      "icon": "183",
+      "name": "Main Room Open",
+      "color": "15",
+      "modDate": {
+        "seconds": 1727251488,
+        "nanoseconds": 375375000
+      },
+      "bleId": 45057,
+      "room_Id": 65,
+      "members": [
+        {
+          "shd_Id": 271,
+          "_id": 287,
+          "pos": {
+            "pos1": 10000
+          }
+        },
+        {
+          "pos": {
+            "pos1": 0,
+            "pos2": 10000
+          },
+          "_id": 156,
+          "shd_Id": 154
+        },
+        {
+          "pos": {
+            "pos1": 0,
+            "pos2": 10000
+          },
+          "_id": 152,
+          "shd_Id": 150
+        },
+        {
+          "shd_Id": 223,
+          "pos": {
+            "pos2": 10000,
+            "pos1": 0
+          },
+          "_id": 225
+        },
+        {
+          "pos": {
+            "pos1": 0,
+            "pos2": 10000
+          },
+          "_id": 229,
+          "shd_Id": 227
+        },
+        {
+          "_id": 220,
+          "pos": {
+            "pos1": 0,
+            "pos2": 10000
+          },
+          "shd_Id": 218
+        }
+      ]
+    },
+    {
+      "name": "Main Room Close",
+      "color": "15",
+      "bleId": 45058,
+      "icon": "185",
+      "modDate": {
+        "seconds": 1722776450,
+        "nanoseconds": 37945000
+      },
+      "_id": 124,
+      "members": [
+        {
+          "pos": {
+            "pos1": 0,
+            "pos2": 0
+          },
+          "shd_Id": 218,
+          "_id": 219
+        },
+        {
+          "pos": {
+            "pos1": 0,
+            "pos2": 0
+          },
+          "_id": 155,
+          "shd_Id": 154
+        },
+        {
+          "pos": {
+            "pos1": 0
+          },
+          "shd_Id": 271,
+          "_id": 286
+        },
+        {
+          "shd_Id": 227,
+          "pos": {
+            "pos1": 0,
+            "pos2": 0
+          },
+          "_id": 228
+        },
+        {
+          "_id": 224,
+          "shd_Id": 223,
+          "pos": {
+            "pos1": 0,
+            "pos2": 0
+          }
+        },
+        {
+          "_id": 151,
+          "pos": {
+            "pos1": 0,
+            "pos2": 0
+          },
+          "shd_Id": 150
+        }
+      ],
+      "room_Id": 65
+    },
+    {
+      "color": "15",
+      "_id": 387,
+      "icon": "186",
+      "name": "Main Room Floor Drafting High",
+      "bleId": 3113,
+      "modDate": {
+        "seconds": 1753717833,
+        "nanoseconds": 512804000
+      },
+      "members": [
+        {
+          "shd_Id": 154,
+          "_id": 390,
+          "pos": {
+            "pos1": 5680,
+            "pos2": 0
+          }
+        },
+        {
+          "pos": {
+            "pos1": 5680,
+            "pos2": 0
+          },
+          "_id": 389,
+          "shd_Id": 150
+        },
+        {
+          "shd_Id": 227,
+          "pos": {
+            "pos1": 5680,
+            "pos2": 0
+          },
+          "_id": 392
+        },
+        {
+          "_id": 391,
+          "shd_Id": 218,
+          "pos": {
+            "pos1": 5680,
+            "pos2": 0
+          }
+        },
+        {
+          "shd_Id": 223,
+          "pos": {
+            "pos1": 5680,
+            "pos2": 0
+          },
+          "_id": 388
+        }
+      ],
+      "room_Id": 65
+    },
+    {
+      "modDate": {
+        "seconds": 1759248317,
+        "nanoseconds": 197761000
+      },
+      "members": [
+        {
+          "_id": 361,
+          "pos": {
+            "pos1": 7060,
+            "pos2": 0
+          },
+          "shd_Id": 154
+        },
+        {
+          "shd_Id": 218,
+          "pos": {
+            "pos2": 0,
+            "pos1": 7060
+          },
+          "_id": 357
+        },
+        {
+          "pos": {
+            "pos1": 7060,
+            "pos2": 0
+          },
+          "shd_Id": 227,
+          "_id": 360
+        },
+        {
+          "pos": {
+            "pos1": 7060,
+            "pos2": 0
+          },
+          "_id": 358,
+          "shd_Id": 150
+        },
+        {
+          "shd_Id": 223,
+          "_id": 359,
+          "pos": {
+            "pos1": 7060,
+            "pos2": 0
+          }
+        }
+      ],
+      "room_Id": 65,
+      "name": "Main Room Floor Drafting",
+      "_id": 356,
+      "bleId": 26425,
+      "icon": "186",
+      "color": "15"
+    },
+    {
+      "_id": 200,
+      "room_Id": 65,
+      "icon": "186",
+      "members": [
+        {
+          "pos": {
+            "pos1": 1307,
+            "pos2": 0,
+            "vel": 100
+          },
+          "shd_Id": 223,
+          "_id": 237
+        },
+        {
+          "shd_Id": 227,
+          "_id": 238,
+          "pos": {
+            "pos2": 0,
+            "pos1": 1307,
+            "vel": 100
+          }
+        },
+        {
+          "pos": {
+            "pos1": 1307,
+            "pos2": 0,
+            "vel": 100
+          },
+          "_id": 204,
+          "shd_Id": 150
+        },
+        {
+          "_id": 201,
+          "pos": {
+            "pos1": 1307,
+            "pos2": 0,
+            "vel": 100
+          },
+          "shd_Id": 154
+        },
+        {
+          "shd_Id": 218,
+          "pos": {
+            "pos1": 1307,
+            "vel": 100,
+            "pos2": 0
+          },
+          "_id": 236
+        }
+      ],
+      "name": "Main Room Top Light",
+      "modDate": {
+        "seconds": 1727251782,
+        "nanoseconds": 976808000
+      },
+      "color": "15",
+      "bleId": 12430
+    },
+    {
+      "room_Id": 65,
+      "members": [
+        {
+          "_id": 210,
+          "pos": {
+            "pos1": 4790,
+            "pos2": 2540
+          },
+          "shd_Id": 154
+        },
+        {
+          "shd_Id": 150,
+          "_id": 212,
+          "pos": {
+            "pos1": 4770,
+            "pos2": 2570
+          }
+        },
+        {
+          "shd_Id": 227,
+          "pos": {
+            "pos1": 4790,
+            "pos2": 2570
+          },
+          "_id": 240
+        },
+        {
+          "shd_Id": 218,
+          "_id": 241,
+          "pos": {
+            "pos2": 2570,
+            "pos1": 4780
+          }
+        },
+        {
+          "shd_Id": 223,
+          "pos": {
+            "pos1": 4760,
+            "pos2": 2560
+          },
+          "_id": 239
+        }
+      ],
+      "name": "Main Room  Privacy",
+      "icon": "184",
+      "modDate": {
+        "seconds": 1754088406,
+        "nanoseconds": 838819000
+      },
+      "color": "15",
+      "_id": 207,
+      "bleId": 15664
+    },
+    {
+      "_id": 216,
+      "bleId": 34100,
+      "color": "15",
+      "modDate": {
+        "seconds": 1747064140,
+        "nanoseconds": 138221000
+      },
+      "icon": "171",
+      "members": [
+        {
+          "pos": {
+            "pos2": 4580,
+            "pos1": 0
+          },
+          "shd_Id": 154,
+          "_id": 217
+        },
+        {
+          "shd_Id": 227,
+          "_id": 362,
+          "pos": {
+            "pos1": 0,
+            "pos2": 4580
+          }
+        }
+      ],
+      "name": "Kitchen Dining",
+      "room_Id": 65
+    },
+    {
+      "_id": 314,
+      "icon": "183",
+      "name": "Room 1 Open",
+      "color": "9",
+      "modDate": {
+        "seconds": 1727258775,
+        "nanoseconds": 997550000
+      },
+      "bleId": 45057,
+      "room_Id": 7,
+      "members": [
+        {
+          "_id": 315,
+          "pos": {
+            "pos1": 10000
+          },
+          "shd_Id": 253
+        }
+      ]
+    },
+    {
+      "modDate": {
+        "seconds": 1727258715,
+        "nanoseconds": 540290000
+      },
+      "room_Id": 7,
+      "_id": 312,
+      "members": [
+        {
+          "shd_Id": 253,
+          "_id": 313,
+          "pos": {
+            "pos1": 0
+          }
+        }
+      ],
+      "bleId": 45058,
+      "icon": "185",
+      "color": "9",
+      "name": "Room 1 Close"
+    },
+    {
+      "bleId": 45057,
+      "color": "14",
+      "members": [
+        {
+          "shd_Id": 265,
+          "pos": {
+            "pos1": 10000
+          },
+          "_id": 319
+        }
+      ],
+      "name": "Room 2 Open",
+      "room_Id": 13,
+      "modDate": {
+        "seconds": 1727258723,
+        "nanoseconds": 110280000
+      },
+      "icon": "183",
+      "_id": 318
+    },
+    {
+      "modDate": {
+        "seconds": 1727258729,
+        "nanoseconds": 995054000
+      },
+      "_id": 316,
+      "icon": "185",
+      "room_Id": 13,
+      "name": "Room 2 Close",
+      "members": [
+        {
+          "shd_Id": 265,
+          "_id": 317,
+          "pos": {
+            "pos1": 0
+          }
+        }
+      ],
+      "color": "14",
+      "bleId": 45058
+    },
+    {
+      "icon": "183",
+      "room_Id": 1,
+      "members": [
+        {
+          "_id": 323,
+          "shd_Id": 262,
+          "pos": {
+            "pos1": 10000
+          }
+        }
+      ],
+      "_id": 322,
+      "modDate": {
+        "seconds": 1727258735,
+        "nanoseconds": 743381000
+      },
+      "name": "Room 3 Open",
+      "color": "11",
+      "bleId": 45057
+    },
+    {
+      "room_Id": 1,
+      "icon": "185",
+      "members": [
+        {
+          "shd_Id": 262,
+          "pos": {
+            "pos1": 0
+          },
+          "_id": 321
+        }
+      ],
+      "_id": 320,
+      "modDate": {
+        "seconds": 1727258741,
+        "nanoseconds": 110002000
+      },
+      "name": "Room 3 Close",
+      "color": "11",
+      "bleId": 45058
+    },
+    {
+      "room_Id": 38,
+      "members": [
+        {
+          "pos": {
+            "pos1": 10000
+          },
+          "_id": 291,
+          "shd_Id": 280
+        }
+      ],
+      "_id": 290,
+      "modDate": {
+        "seconds": 1727258747,
+        "nanoseconds": 306694000
+      },
+      "bleId": 45057,
+      "icon": "183",
+      "color": "1",
+      "name": "Room 4 Open"
+    },
+    {
+      "members": [
+        {
+          "pos": {
+            "pos1": 0
+          },
+          "shd_Id": 280,
+          "_id": 289
+        }
+      ],
+      "bleId": 45058,
+      "room_Id": 38,
+      "modDate": {
+        "seconds": 1727258752,
+        "nanoseconds": 956887000
+      },
+      "color": "1",
+      "_id": 288,
+      "icon": "185",
+      "name": "Room 4 Close"
+    },
+    {
+      "modDate": {
+        "seconds": 1727258758,
+        "nanoseconds": 488204000
+      },
+      "room_Id": 44,
+      "members": [
+        {
+          "pos": {
+            "pos1": 10000
+          },
+          "_id": 301,
+          "shd_Id": 283
+        }
+      ],
+      "bleId": 45057,
+      "name": "Walk In Open",
+      "icon": "183",
+      "_id": 300,
+      "color": "6"
+    },
+    {
+      "color": "6",
+      "icon": "185",
+      "_id": 298,
+      "bleId": 45058,
+      "name": "Walk In Close",
+      "modDate": {
+        "seconds": 1727258764,
+        "nanoseconds": 435069000
+      },
+      "members": [
+        {
+          "shd_Id": 283,
+          "_id": 299,
+          "pos": {
+            "pos1": 0
+          }
+        }
+      ],
+      "room_Id": 44
+    },
+    {
+      "color": "8",
+      "icon": "183",
+      "_id": 234,
+      "bleId": 45057,
+      "name": "Small Hall Open",
+      "members": [
+        {
+          "_id": 235,
+          "pos": {
+            "pos1": 10000
+          },
+          "shd_Id": 231
+        }
+      ],
+      "room_Id": 126,
+      "modDate": {
+        "seconds": 1727251005,
+        "nanoseconds": 951972000
+      }
+    },
+    {
+      "room_Id": 126,
+      "name": "Small Hall Close",
+      "members": [
+        {
+          "_id": 233,
+          "shd_Id": 231,
+          "pos": {
+            "pos1": 0
+          }
+        }
+      ],
+      "icon": "185",
+      "modDate": {
+        "seconds": 1727251011,
+        "nanoseconds": 835253000
+      },
+      "color": "8",
+      "bleId": 45058,
+      "_id": 232
+    }
+  ],
+  "home": {
+    "power": 1,
+    "country": "DK",
+    "tz": "Europe/Copenhagen",
+    "name": "Home",
+    "key": "00000000000000000000000000000000",
+    "loc": {
+      "latitude": 0.0,
+      "longitude": 0.0
+    },
+    "autosEnabled": true,
+    "gtwsNeedReconfig": false
+  },
+  "aHome": false,
+  "remotes": [],
+  "gHome": true,
+  "modDate": {
+    "seconds": 1792094107,
+    "nanoseconds": 908329000
+  },
+  "automations": []
+}
