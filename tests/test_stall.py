@@ -185,6 +185,22 @@ async def test_a_curtain_whose_motor_backs_off_at_the_top_is_raised_in_steps(
     assert _sent(gateway) == [0.98, 0.99, 1.0]
 
 
+async def test_the_steps_start_from_where_the_motor_backed_off_to_during_the_wait(
+    hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, clock: ManualClock,
+    stalls: list[ShadeStalled],
+) -> None:
+    await _stalled_at(app, gateway, hub, CURTAIN, 0.99)
+    await until(lambda: len(stalls) == 1)
+    await _pause(clock, 2.0)
+    gateway.drift(CURTAIN, {P: 0.95})
+    await _pause(clock, 19.0)
+    for moves in (2, 3, 4):
+        await _ends(hub, gateway, clock, moves)
+    await until(lambda: len(stalls) == 2)
+    assert stalls[1].outcome is RetryOutcome.OPENED
+    assert _sent(gateway) == [0.98, 0.99, 1.0]
+
+
 async def test_the_bottom_rail_is_raised_with_only_its_own_rail(
     hub: PowerViewHub, gateway: SimulatedGateway, app: PowerViewClient, clock: ManualClock,
     stalls: list[ShadeStalled],

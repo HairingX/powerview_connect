@@ -937,7 +937,9 @@ class PowerViewHub:
             self._log.warning("Shade %s (%s) at %.2f: round %d of %d starts in %.0f s",
                               shade_id, name, reached, round_, settings.rounds, settings.wait)
             await self._pause(active, settings.wait)
-            steps = retry_steps(reached)
+            # The motor may have backed off further while the retry waited.
+            now = self._cover_openness(shade_id, active.cover)
+            steps = retry_steps(reached if now is None else now)
             reached = await self._first_step(shade_id, active, steps, settings.attempts)
             for number, openness in enumerate(steps[1:], start=2):
                 self._log.warning("Shade %s (%s) held at %.2f; step %d of %d to %.2f in %.0f s",
