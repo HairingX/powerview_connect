@@ -1,0 +1,108 @@
+{
+  "config": {
+    "rev": 1,
+    "hwVersion": "3.0.4",
+    "model": "Pro",
+    "brand": "Luxaflex",
+    "serialNumber": "gateway-134",
+    "firmware": {
+      "mainProcessor": {
+        "revision": 3,
+        "subRevision": 2,
+        "build": 59,
+        "name": "PV_Gen3"
+      },
+      "radios": [
+        {
+          "revision": 3,
+          "subRevision": 0,
+          "build": 43
+        },
+        {
+          "revision": 3,
+          "subRevision": 0,
+          "build": 43
+        }
+      ]
+    },
+    "rangeMapper": {
+      "minRSSI": -88,
+      "levelingSeconds": 4
+    },
+    "homeAssoc": 1,
+    "color": {
+      "red": 0,
+      "green": 0,
+      "blue": 0,
+      "brightness": 0
+    },
+    "cloudConfig": {
+      "homeId": "home-0001",
+      "gatewayId": 134,
+      "collection": "homes",
+      "cloudEnv": 1
+    },
+    "networkConfig": {
+      "staticIpEnabled": false,
+      "staticIp": {
+        "ip_address": "0.0.0.0",
+        "gateway_ip": "0.0.0.0",
+        "netmask": "0.0.0.0",
+        "dns": [
+          "0.0.0.0"
+        ]
+      },
+      "wifiCountryCode": "00"
+    },
+    "networkStatus": {
+      "ipAddress": "192.0.2.30",
+      "activeInterface": "eth0",
+      "primaryMacAddress": "00:00:5E:00:53:34",
+      "dns": [],
+      "eth0": {
+        "name": "eth0",
+        "ip_address": "192.0.2.30",
+        "mac_address": "00:00:5E:00:53:35",
+        "netmask": "255.255.240.0",
+        "type": "Wired",
+        "gateway_ip": "192.0.2.34"
+      },
+      "wlan0": {},
+      "internetState": "Connected",
+      "ssid": ""
+    },
+    "mgwConfig": {
+      "primary": false
+    },
+    "mgwStatus": {
+      "running": true
+    },
+    "ip": "192.0.2.30",
+    "networkVPN": {
+      "state": 0,
+      "id": "",
+      "deviceID": ""
+    }
+  },
+  "manifest": {
+    "version": "3.2.59",
+    "gateway": {
+      "hd-typescript": {
+        "version": "3.2.081",
+        "sha": "71d00dea6c6a2eb94e8a17b9953dfc23daaf0d8a"
+      },
+      "hd-matter-bridge": {
+        "version": "1.1.11",
+        "sha": "178e2213dc51b02ccdd455afc02442107adfdd46"
+      },
+      "pb-homekit": {
+        "version": "3.2.0",
+        "sha": "91b8fbe7031d22f53caab66c52713b7358c85155"
+      },
+      "hd-lutron": {
+        "version": "0.3.0",
+        "sha": "54659d0d56b89410dfaf5c0ee18911d281062fc5"
+      }
+    }
+  }
+}

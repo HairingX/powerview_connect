@@ -71,14 +71,14 @@ def _ids(shade_ids: Iterable[int]) -> str:
 class PowerViewClient:
     """A client for one PowerView Gen 3 gateway, on a session its owner keeps.
 
-    Endpoints, as the Gen 3 API documents them and a gateway was measured to answer:
+    Endpoints, as a gateway was measured to answer:
 
     - `GET /home`: the whole home
     - `GET /gateway`: the gateway's own state; auxiliary gateways answer it too
     - `GET /home/shades/{id}`: one shade; its positions change live while it moves
     - `PUT /home/shades/positions?ids=...`: move; a rail not given is not changed
     - `PUT /home/shades/stop?ids=...`
-    - `PUT /home/scenes/{id}/activate`
+    - `PUT /home/scenes/{id}/activate`, not measured
     - `PUT /home/shades/{id}/motion` with `{"motion": "jog"}`, the only motion it takes
     - `GET /home/shades/events?sse=true`: shade events, as server-sent events
     """
