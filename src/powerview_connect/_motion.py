@@ -34,7 +34,8 @@ class ShadeTracker:
         """Each rail's target while moving, None where it is not known."""
         self.last_target: dict[Rail, float] = {}
         """The targets of the last move once it has ended, until the next one begins; emptied by
-        a stop, as a stopped move did not aim where it ended."""
+        a stop sent, and by a motion-stopped that ends no move, as of a shade sliding down by
+        itself: neither stop is where a move aimed."""
         self.moving = False
         self.eta: float | None = None
         """The gateway's estimate of the current move's time in seconds."""
@@ -43,6 +44,7 @@ class ShadeTracker:
         self._start_grace = start_grace
         self._min_timeout = min_timeout
         self._started_at = 0.0
+        self._awaiting_stop = False
         self._last_change_at = 0.0
         self._changed_since_start = False
         self._last_delta: dict[Rail, float] = {}
@@ -65,6 +67,7 @@ class ShadeTracker:
         self.target = dict.fromkeys(RAILS)
         self.last_target = {}
         self._started_at = now
+        self._awaiting_stop = True
         self._last_change_at = now
         self._changed_since_start = False
         self._last_delta = {}
@@ -105,8 +108,15 @@ class ShadeTracker:
         self.eta = event.eta
 
     def motion_stopped(self, event: ShadeEvent) -> None:
-        """End the move at the final positions of a motion-stopped event."""
+        """End the move at the final positions of a motion-stopped event.
+
+        The first motion-stopped after a move began ends that move, even where the tracker has
+        ended it already; any other one ends no move.
+        """
         self._apply(event.current)
+        if not self._awaiting_stop:
+            self.last_target = {}
+        self._awaiting_stop = False
         self._finish()
 
     def command(self, now: float, targets: Positions) -> bool:

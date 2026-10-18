@@ -1,0 +1,72 @@
+[
+ {
+  "seconds": 0.0,
+  "id": 262,
+  "primary": 0.98,
+  "took": 1.0,
+  "by": "retry"
+ },
+ {
+  "seconds": 95.029,
+  "id": 262,
+  "primary": 1.0,
+  "took": 1.46,
+  "by": "retry"
+ },
+ {
+  "seconds": 464.202,
+  "id": 262,
+  "primary": 0.97,
+  "took": 0.88,
+  "by": "retry"
+ },
+ {
+  "seconds": 572.818,
+  "id": 280,
+  "primary": 1.0,
+  "took": 1.4,
+  "by": "home assistant"
+ },
+ {
+  "seconds": 577.667,
+  "id": 280,
+  "primary": 0.94,
+  "took": 1.39,
+  "by": "retry"
+ },
+ {
+  "seconds": 742.889,
+  "id": 280,
+  "primary": 1.0,
+  "took": 1.29,
+  "by": "home assistant"
+ },
+ {
+  "seconds": 747.806,
+  "id": 280,
+  "primary": 0.91,
+  "took": 1.4,
+  "by": "retry"
+ },
+ {
+  "seconds": 755.516,
+  "id": 280,
+  "primary": 1.0,
+  "took": 1.13,
+  "by": "home assistant"
+ },
+ {
+  "seconds": 773.512,
+  "id": 280,
+  "primary": 0.97,
+  "took": 1.17,
+  "by": "retry"
+ },
+ {
+  "seconds": 869.629,
+  "id": 280,
+  "primary": 0.98,
+  "took": 1.26,
+  "by": "retry"
+ }
+]

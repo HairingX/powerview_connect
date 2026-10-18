@@ -1,0 +1,592 @@
+[
+ {
+  "seconds": 3.034,
+  "evt": "motion-started",
+  "id": 262,
+  "currentPositions": {
+   "primary": 0.97,
+   "secondary": 0,
+   "tilt": 1
+  },
+  "targetPositions": {
+   "primary": 0.98,
+   "secondary": 0,
+   "tilt": 1,
+   "etaInSeconds": 3
+  }
+ },
+ {
+  "seconds": 3.563,
+  "evt": "motion-stopped",
+  "id": 262,
+  "currentPositions": {
+   "primary": 0.98,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 97.05,
+  "evt": "motion-started",
+  "id": 262,
+  "currentPositions": {
+   "primary": 0.98,
+   "secondary": 0,
+   "tilt": 1
+  },
+  "targetPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1,
+   "etaInSeconds": 3
+  }
+ },
+ {
+  "seconds": 99.028,
+  "evt": "motion-stopped",
+  "id": 262,
+  "currentPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 101.003,
+  "evt": "shade-online",
+  "id": 262,
+  "currentPositions": {
+   "primary": 0.98,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 102.999,
+  "evt": "shade-online",
+  "id": 262,
+  "currentPositions": {
+   "primary": 0.96,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 105.027,
+  "evt": "shade-online",
+  "id": 262,
+  "currentPositions": {
+   "primary": 0.95,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 105.028,
+  "evt": "motion-stopped",
+  "id": 262,
+  "currentPositions": {
+   "primary": 0.95,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 441.286,
+  "evt": "motion-started",
+  "id": 253,
+  "currentPositions": {
+   "primary": 0.95,
+   "secondary": 0,
+   "tilt": 1
+  },
+  "targetPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1,
+   "etaInSeconds": 4
+  }
+ },
+ {
+  "seconds": 447.245,
+  "evt": "motion-stopped",
+  "id": 253,
+  "currentPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 463.307,
+  "evt": "motion-started",
+  "id": 262,
+  "currentPositions": {
+   "primary": 0.95,
+   "secondary": 0,
+   "tilt": 1
+  },
+  "targetPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1,
+   "etaInSeconds": 4
+  }
+ },
+ {
+  "seconds": 463.311,
+  "evt": "motion-stopped",
+  "id": 262,
+  "currentPositions": {
+   "primary": 0.95,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 465.244,
+  "evt": "shade-online",
+  "id": 262,
+  "currentPositions": {
+   "primary": 0.93,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 467.228,
+  "evt": "shade-online",
+  "id": 262,
+  "currentPositions": {
+   "primary": 0.92,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 469.243,
+  "evt": "shade-online",
+  "id": 262,
+  "currentPositions": {
+   "primary": 0.9,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 471.387,
+  "evt": "motion-stopped",
+  "id": 262,
+  "currentPositions": {
+   "primary": 0.9,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 477.36,
+  "evt": "motion-started",
+  "id": 262,
+  "currentPositions": {
+   "primary": 0.9,
+   "secondary": 0,
+   "tilt": 1
+  },
+  "targetPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1,
+   "etaInSeconds": 6
+  }
+ },
+ {
+  "seconds": 483.317,
+  "evt": "motion-stopped",
+  "id": 262,
+  "currentPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 574.232,
+  "evt": "motion-started",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.9,
+   "secondary": 0,
+   "tilt": 1
+  },
+  "targetPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1,
+   "etaInSeconds": 6
+  }
+ },
+ {
+  "seconds": 576.276,
+  "evt": "motion-stopped",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.91,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 578.278,
+  "evt": "shade-online",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.9,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 580.314,
+  "evt": "shade-online",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.87,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 582.169,
+  "evt": "shade-online",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.86,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 584.171,
+  "evt": "motion-stopped",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.86,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 624.537,
+  "evt": "shade-online",
+  "id": 231,
+  "currentPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 624.537,
+  "evt": "shade-online",
+  "id": 274,
+  "currentPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 624.537,
+  "evt": "shade-online",
+  "id": 163,
+  "currentPositions": {
+   "primary": 0,
+   "secondary": 0.65,
+   "tilt": 0
+  }
+ },
+ {
+  "seconds": 624.537,
+  "evt": "shade-online",
+  "id": 277,
+  "currentPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 625.521,
+  "evt": "shade-online",
+  "id": 259,
+  "currentPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 625.521,
+  "evt": "shade-online",
+  "id": 265,
+  "currentPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 625.521,
+  "evt": "shade-online",
+  "id": 248,
+  "currentPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 625.521,
+  "evt": "shade-online",
+  "id": 253,
+  "currentPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 625.522,
+  "evt": "shade-online",
+  "id": 262,
+  "currentPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 625.522,
+  "evt": "shade-online",
+  "id": 256,
+  "currentPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 626.258,
+  "evt": "shade-online",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.86,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 626.258,
+  "evt": "shade-online",
+  "id": 283,
+  "currentPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 626.259,
+  "evt": "shade-online",
+  "id": 268,
+  "currentPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 746.395,
+  "evt": "motion-started",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.86,
+   "secondary": 0,
+   "tilt": 1
+  },
+  "targetPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1,
+   "etaInSeconds": 7
+  }
+ },
+ {
+  "seconds": 746.396,
+  "evt": "motion-stopped",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.86,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 746.402,
+  "evt": "shade-online",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.85,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 748.273,
+  "evt": "shade-online",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.84,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 750.285,
+  "evt": "shade-online",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.82,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 752.368,
+  "evt": "motion-stopped",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.81,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 758.528,
+  "evt": "motion-started",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.81,
+   "secondary": 0,
+   "tilt": 1
+  },
+  "targetPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1,
+   "etaInSeconds": 9
+  }
+ },
+ {
+  "seconds": 768.464,
+  "evt": "motion-stopped",
+  "id": 280,
+  "currentPositions": {
+   "primary": 1,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 768.469,
+  "evt": "shade-online",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.99,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 770.316,
+  "evt": "shade-online",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.97,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 772.339,
+  "evt": "shade-online",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.96,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 772.339,
+  "evt": "motion-stopped",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.95,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 776.497,
+  "evt": "motion-started",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.95,
+   "secondary": 0,
+   "tilt": 1
+  },
+  "targetPositions": {
+   "primary": 0.97,
+   "secondary": 0,
+   "tilt": 1,
+   "etaInSeconds": 3
+  }
+ },
+ {
+  "seconds": 778.359,
+  "evt": "motion-stopped",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.97,
+   "secondary": 0,
+   "tilt": 1
+  }
+ },
+ {
+  "seconds": 872.749,
+  "evt": "motion-started",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.97,
+   "secondary": 0,
+   "tilt": 1
+  },
+  "targetPositions": {
+   "primary": 0.98,
+   "secondary": 0,
+   "tilt": 1,
+   "etaInSeconds": 3
+  }
+ },
+ {
+  "seconds": 872.752,
+  "evt": "motion-stopped",
+  "id": 280,
+  "currentPositions": {
+   "primary": 0.98,
+   "secondary": 0,
+   "tilt": 1
+  }
+ }
+]

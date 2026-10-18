@@ -57,7 +57,7 @@ class CoverSpec:
     vertical: bool = False
     """The shade draws sideways, as a curtain does."""
     retryable: bool = False
-    """An opening that stalls can be retried in steps: the cover opens upwards, and its fabric
+    """An opening that stalls can be retried: the cover opens upwards, and its fabric
     gathers as it opens."""
 
     def openness(self, positions: Mapping[Rail, float]) -> float | None:

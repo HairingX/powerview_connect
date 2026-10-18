@@ -156,10 +156,26 @@ def test_the_targets_of_a_move_are_kept_once_it_ends_until_the_next_begins() -> 
     assert tracker.last_target == {}
     tracker.motion_stopped(ShadeEvent("motion-stopped", 1, {P: 0.9}, {}, None))
     assert tracker.last_target == {P: 1.0, S: 0.0}
-    tracker.motion_stopped(ShadeEvent("motion-stopped", 1, {P: 0.9}, {}, None))
-    assert tracker.last_target == {P: 1.0, S: 0.0}
     tracker.command(1.0, {P: 0.5})
     assert tracker.last_target == {}
+
+
+def test_a_motion_stopped_that_ends_no_move_forgets_the_targets_of_the_last() -> None:
+    """As of a shade that reached the top and slides back down by itself."""
+    tracker = ShadeTracker({P: 0.0, S: 0.0, T: 0.0})
+    tracker.motion_started(ShadeEvent("motion-started", 1, {P: 0.0}, {P: 1.0}, 9), now=0.0)
+    tracker.motion_stopped(ShadeEvent("motion-stopped", 1, {P: 1.0}, {}, None))
+    tracker.motion_stopped(ShadeEvent("motion-stopped", 1, {P: 0.95}, {}, None))
+    assert (tracker.last_target, tracker.current[P]) == ({}, 0.95)
+
+
+def test_the_first_motion_stopped_ends_a_move_the_tracker_ended_already() -> None:
+    tracker = ShadeTracker({P: 0.0, S: 0.0, T: 0.0}, stall=6.0)
+    tracker.command(0.0, {P: 1.0})
+    tracker.poll({P: 0.5}, 1.0)
+    assert not tracker.poll({P: 0.5}, 8.0)
+    tracker.motion_stopped(ShadeEvent("motion-stopped", 1, {P: 0.5}, {}, None))
+    assert tracker.last_target == {P: 1.0}
 
 
 def test_a_stop_sent_forgets_the_targets_of_the_move() -> None:

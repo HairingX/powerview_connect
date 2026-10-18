@@ -59,6 +59,18 @@ an event has no `isoDate` or `bleName`, and `seconds` is the time after the firs
 | `2026-10-17/scene-events.json` | every event of the event stream, in the order it came |
 | `2026-10-17/scene-reads.json` | every `GET /home/shades/{id}` of a moving shade: when it was sent, how long it took, and the shade; three at most at once |
 
+## 2026-10-18: pleated shades that stall at the top
+
+Two hard-wired Duette shades of type 6 of the home of 2026-10-16, each served by an auxiliary
+gateway, with the retry of a stalled opening of the library's 1.3.0 turned on: it raised them in
+small steps. Taken from the library's debug log, as on 2026-10-17; `seconds` is the time after
+the first line. The log began while the first retry ran.
+
+| File | What it is |
+|---|---|
+| `2026-10-18/stall-events.json` | every event of the event stream, in the order it came |
+| `2026-10-18/stall-moves.json` | every move Home Assistant sent: when its answer came, the shade, the primary position sent, how long the answer took, and whether the retry or the user in Home Assistant sent it; moves from the PowerView app show only as events |
+
 ## Adding a capture
 
 Put it in a folder of the day it was captured, hide what the table above says, describe it

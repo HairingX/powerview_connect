@@ -110,7 +110,7 @@ class _RecordingClock(ManualClock):
     {"poll_interval": 0.0}, {"stream_idle_timeout": -1.0}, {"reconnect_backoff": ()},
     {"reconnect_backoff": (1.0, -1.0)}, {"max_concurrent_reads": 0},
     {"removal_confirmations": 0}, {"stall": 0.0}, {"settle": -0.1}, {"start_grace": 0.0},
-    {"min_timeout": -1.0}, {"retry_step_timeout": 0.0},
+    {"min_timeout": -1.0}, {"retry_move_timeout": 0.0},
 ])
 def test_timing_the_hub_cannot_work_with_is_refused(wrong: dict[str, object]) -> None:
     with pytest.raises(ValueError):
@@ -378,6 +378,16 @@ async def test_events_say_when_a_shade_goes_offline_and_comes_back(
     await until(lambda: not hub.shade(PATIO).online)
     gateway.set_online(PATIO, True)
     await until(lambda: hub.shade(PATIO).online)
+
+
+async def test_a_shade_online_event_says_where_a_shade_standing_still_is(
+    hub: PowerViewHub, gateway: SimulatedGateway
+) -> None:
+    """A shade sliding down by itself reports where it is in these, and in no motion-started."""
+    gateway.shades[PATIO].positions[P] = 0.95
+    gateway.set_online(PATIO, True)
+    await until(lambda: hub.shade(PATIO).positions[P] == 0.95)
+    assert not hub.shade(PATIO).moving
 
 
 async def test_events_of_other_kinds_or_shades_not_known_change_nothing(

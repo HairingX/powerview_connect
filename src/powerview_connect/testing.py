@@ -200,6 +200,9 @@ class SimulatedGateway:
         """Every request received, oldest first."""
         self.command_errors: dict[int, int] = {}
         """Shade id to the error code the gateway reports for a command to that shade."""
+        self.backing_off: set[int] = set()
+        """Shades whose motor stalled: the next command to one is taken without a motion-started,
+        as its motor backs off downwards instead; `drift` then says where it went."""
         self._streams: list[asyncio.Queue[str | None]] = []
         self._stream_opened = asyncio.Event()
         self._runner: web.AppRunner | None = None
@@ -423,6 +426,15 @@ class SimulatedGateway:
         shade.positions.update(at or {})
         self.emit(EventKind.MOTION_STOPPED, shade_id)
 
+    def drift(self, shade_id: int, positions: Mapping[Rail, float]) -> None:
+        """Move a shade without a motion-started, as one sliding down from the top or a motor
+        backing off does: a shade-online event says where it went, and a motion-stopped ends it."""
+        shade = self.shades[shade_id]
+        shade.target = None
+        shade.positions.update(positions)
+        self.emit(EventKind.SHADE_ONLINE, shade_id)
+        self.emit(EventKind.MOTION_STOPPED, shade_id)
+
     def set_online(self, shade_id: int, online: bool) -> None:
         """Report a shade coming online or going offline."""
         self.emit(EventKind.SHADE_ONLINE if online else EventKind.SHADE_OFFLINE, shade_id)
@@ -501,7 +513,9 @@ class SimulatedGateway:
             if isinstance(value := given.get(rail), int | float)
         }
         for shade in shades:
-            if shade.id not in self.command_errors:
+            if shade.id in self.backing_off:
+                self.backing_off.discard(shade.id)
+            elif shade.id not in self.command_errors:
                 self._start_motion(shade, positions)
         return self._answer(shades)
 
