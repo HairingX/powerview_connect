@@ -151,8 +151,8 @@ The hub does not keep which covers it is on for across restarts: that is the hos
   never a stall, nor is a move the hub saw end without an event, nor a shade that reached the
   top and slides down by itself; a stop from the PowerView app near the top cannot be told from
   a stall.
-- **What it does.** It lowers the cover by `lower_by` (0.1) and, as soon as it has stopped, opens
-  it fully in one move, moving only that cover's rail. Where it stalls again, it does so again
+- **What it does.** It lowers the cover by `lower_by` (0.1) and, once the shade has sent no event
+  for `Timing.retry_settle` (3 s), opens it fully in one move, moving only that cover's rail. Where it stalls again, it does so again
   from there, up to `attempts` (2) times.
 - **What it says.** `ShadeStalled(shade_id=, role=, openness=, outcome=)` once as it starts
   (`STARTED`, where the cover stopped), and once as it ends, where the cover ended: `OPENED`,
@@ -174,7 +174,8 @@ not looked at again.
   (`gateway_interval`, 1 min); how many moving shades are read at once
   (`max_concurrent_reads`, 3); the waits before reopening the stream; when a move without a
   stop event has ended (`stall`, `settle`, `start_grace`, `min_timeout`); and how long a move
-  of a retried opening may take (`retry_move_timeout`). It refuses values the hub cannot work
+  of a retried opening may take (`retry_move_timeout`), and how long a lowered shade is left
+  quiet before it is opened (`retry_settle`). It refuses values the hub cannot work
   with.
 - **`clock`** is any `Clock`: something with `monotonic()` and `async sleep(seconds)`. The
   event loop's own time by default, `testing.ManualClock` in tests.

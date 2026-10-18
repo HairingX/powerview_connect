@@ -146,8 +146,9 @@ every one has stopped, then one minute more.
 **Record:** the log; where each curtain stopped, as it looks; whether a stalled one was lowered and
 opened again, and whether it then looked fully open and stayed so.
 
-**Unknown:** whether lowering by 0.1 is always enough for a motor that stalled to open again, and
-whether a curtain opened so slides down from the top as one opened from where it stalled does.
+**Unknown:** whether lowering by 0.1 is always enough for a motor that stalled to open again;
+whether a motor backs off by itself after a stall or because of the next command; and whether a
+curtain opened so slides down from the top as one opened from where it stalled does.
 
 **Result (2026-10-18, library 1.3.0, which raised a stalled curtain in three small steps):** two
 Duette curtains of type 6, 262 and 280; the captures of 2026-10-18 hold the log.
@@ -158,7 +159,8 @@ Duette curtains of type 6, 262 and 280; the captures of 2026-10-18 hold the log.
 - The step after a stall did not raise the curtain: its motor backed off downwards by 0.05,
   with no `motion-started`, and the retry gave up. An opening sent 3-6 s later opened it fully;
   one sent 158 s later stalled again.
-- Both curtains that reached the top slid down by themselves to 0.95 within 4-6 s, and the
-  retry took that for a stall. Steps of 0.01-0.02 from there stayed where they stopped.
+- Both curtains that reached the top slid down by themselves to 0.95 within 4-6 s. 280's was
+  taken for a stall; 262's came during the retry, which did not look at it. Steps of 0.01-0.02
+  from there stayed where they stopped.
 - So a retry lowers a stalled curtain and opens it at once, and a curtain sliding down from the
   top is not retried: test 7 is to be made again with that.

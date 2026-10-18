@@ -110,7 +110,7 @@ class _RecordingClock(ManualClock):
     {"poll_interval": 0.0}, {"stream_idle_timeout": -1.0}, {"reconnect_backoff": ()},
     {"reconnect_backoff": (1.0, -1.0)}, {"max_concurrent_reads": 0},
     {"removal_confirmations": 0}, {"stall": 0.0}, {"settle": -0.1}, {"start_grace": 0.0},
-    {"min_timeout": -1.0}, {"retry_move_timeout": 0.0},
+    {"min_timeout": -1.0}, {"retry_move_timeout": 0.0}, {"retry_settle": -1.0},
 ])
 def test_timing_the_hub_cannot_work_with_is_refused(wrong: dict[str, object]) -> None:
     with pytest.raises(ValueError):

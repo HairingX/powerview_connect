@@ -72,20 +72,24 @@ class Timing:
     of it."""
     retry_move_timeout: float = 90.0
     """Longest a move of a retried opening may take to stop."""
+    retry_settle: float = 3.0
+    """How long a lowered shade must have sent no event before it is opened again: openings sent
+    3-6 s after a motor that stalled had backed off opened fully."""
 
     def __post_init__(self) -> None:
         """Refuse values the hub cannot work with.
 
         Raises:
-            ValueError: an interval or a limit of a move is not positive, `settle` is negative, no
+            ValueError: an interval or a limit of a move is not positive, `settle` or
+                `retry_settle` is negative, no
                 wait is given before reopening the stream, or fewer than one read or
                 confirmation is allowed.
         """
         intervals = (self.poll_interval, self.refresh_interval, self.gateway_interval,
                      self.request_timeout, self.stream_idle_timeout, self.retry_move_timeout,
                      self.stall, self.start_grace, self.min_timeout)
-        if any(interval <= 0 for interval in intervals) or self.settle < 0:
-            raise ValueError(f"intervals and timeouts must be positive, settle 0 or more: {self}")
+        if any(interval <= 0 for interval in intervals) or min(self.settle, self.retry_settle) < 0:
+            raise ValueError(f"intervals and timeouts must be positive, settles 0 or more: {self}")
         if not self.reconnect_backoff or any(wait < 0 for wait in self.reconnect_backoff):
             raise ValueError(f"reconnect_backoff needs waits of 0 or more: {self}")
         if self.max_concurrent_reads < 1 or self.removal_confirmations < 1:
@@ -222,10 +226,14 @@ class _Interrupted(Exception):
 class _ActiveRetry:
     cover: CoverSpec
     expected: float | None = None
-    """The openness of the step sent, while its move is awaited."""
+    """The openness of the move sent, while it is awaited."""
+    stopped_at: float | None = None
+    """How far open the cover was at the shade's last motion-stopped."""
+    heard_at: float = 0.0
+    """When the shade last sent an event, on the hub's clock."""
     interrupted: bool = False
     wake: asyncio.Event = field(default_factory=asyncio.Event)
-    """Set by the step's motion-stopped, and by an interruption."""
+    """Set by any motion-stopped of the shade, and by an interruption."""
 
 
 def _metadata(shade: Shade) -> Shade:
@@ -822,13 +830,15 @@ class PowerViewHub:
         if tracker is None:
             return
         active = self._active.get(event.shade_id)
+        if active is not None:
+            active.heard_at = self._clock.monotonic()
         match event.kind:
             case EventKind.MOTION_STARTED:
                 tracker.motion_started(event, self._clock.monotonic())
                 self._poll(event.shade_id)
                 if active is not None:
                     aimed = active.cover.openness(event.target)
-                    # A move without a target for the rail cannot be told from the step's own.
+                    # A move without a target for the rail cannot be told from the retry's own.
                     if aimed is not None and (active.expected is None
                                               or abs(aimed - active.expected) > STEP):
                         self._interrupt(event.shade_id)
@@ -851,6 +861,8 @@ class PowerViewHub:
             if active is None:
                 self._detect_stall(event.shade_id)
             else:
+                # Taken now: a shade-online sliding the cover down can come in the same instant.
+                active.stopped_at = self._cover_openness(event.shade_id, active.cover)
                 active.wake.set()
 
     # ----------------------------------------------------------------- stalls
@@ -909,7 +921,8 @@ class PowerViewHub:
             del self._active[shade_id]
             if (tracker := self._trackers.get(shade_id)) is not None:
                 tracker.last_target = {}
-            openness = self._cover_openness(shade_id, active.cover)
+            openness = (active.stopped_at if outcome is RetryOutcome.OPENED
+                        else self._cover_openness(shade_id, active.cover))
             name = self._shades[shade_id].name if shade_id in self._shades else ""
             self._log.info("Shade %s (%s) ended at %s: %s", shade_id, name,
                            "unknown" if openness is None else f"{openness:.2f}", outcome)
@@ -919,12 +932,13 @@ class PowerViewHub:
                               settings: StalledOpenRetry) -> RetryOutcome:
         now = start
         for _ in range(settings.attempts):
-            # Opened again at once: a motor left standing after lowering stalled again.
             if not await self._move_and_wait(shade_id, active, max(0.0, now - settings.lower_by)):
                 return RetryOutcome.GAVE_UP
+            # Soon, but not before the motor is still: one left standing long stalled again.
+            await self._wait_quiet(active, self._timing.retry_settle)
             if not await self._move_and_wait(shade_id, active, 1.0):
                 return RetryOutcome.GAVE_UP
-            reached = self._cover_openness(shade_id, active.cover)
+            reached = active.stopped_at
             if reached is None or reached >= 1.0 - STEP:
                 return RetryOutcome.GAVE_UP if reached is None else RetryOutcome.OPENED
             now = reached
@@ -944,6 +958,13 @@ class PowerViewHub:
             self._log.debug("Shade %s did not stop within %.0f s", shade_id,
                             self._timing.retry_move_timeout)
         return stopped
+
+    async def _wait_quiet(self, active: _ActiveRetry, seconds: float) -> None:
+        """Wait on the hub's clock until the shade has sent no event for `seconds`; raises
+        `_Interrupted` once the retry is interrupted."""
+        while (left := active.heard_at + seconds - self._clock.monotonic()) > 0:
+            await self._wait(active, left)
+            active.wake.clear()
 
     async def _wait(self, active: _ActiveRetry, seconds: float) -> bool:
         """Wait on the hub's clock until the retry is woken or `seconds` have passed; returns
