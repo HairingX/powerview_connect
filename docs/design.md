@@ -96,21 +96,21 @@ it stopped, whoever started it, the hub can tell such a stop and retry it so.
   open: lower down, a stop is taken as meant, as from the app's stop button. Nearer the top, a
   stop from the app cannot be told from a stall; a shade often stopped there by hand is left
   with the retry off.
-- **Lower, then raise in steps.** A motor that backed off was seen to refuse an opening from 0.85
-  and above, at once or after minutes, and to take one from 0.81, four back-offs of 0.05 below
-  the top. A motor likely counts turns, not distance, so a taller shade backs off less of its
-  height: the retry lowers the cover below the highest point it reached since its last move
-  began by `back_offs` times the back-off, 4 by default, each counted half a step more, as
-  positions come rounded to 0.01. The tracker keeps each rail's lowest and highest position
-  since a move began for it. The steps up are worked out from where the motor backed off
-  to, as that is as far as the fabric was gathered: two thirds of the way from there to the top,
-  five sixths, and all of the way. Where the motor backed off to, and where a step ended, counts
-  once the shade has sent no event for `Timing.retry_settle`: a motor backing off reports where it
-  is every 2 s, so a move sent while it still backs off would be lost in it. After each step that
-  held, the retry waits `delay` for the fabric to settle, whatever the shade sends meanwhile. A
-  step the motor backs off from starts a new round, up to `rounds` in all. A motor that backs off
-  sends no `motion-started`, so each move waits for the shade's next `motion-stopped` alone. Each
-  start, step, back-off and end is logged as a warning, as the user tunes the retry from the log.
+- **Still, then open again.** A motor that backed off was seen to refuse an opening from 0.85
+  and above, at once or minutes later, and to take one now and then. Lowering it first did not
+  help: from 0.59 and 0.70 it rose, and backed off again near the top. What has worked on these
+  shades, by hand and as a Home Assistant automation, is to open a shade again once it has been
+  still for minutes, and at times to hold it just below the top for the fabric to fold. So the
+  retry waits for the shade to have been still for `delay`, 300 s by default, and opens it again
+  in up to three attempts: fully open; to 0.98, held there for `delay`, then fully open; and fully
+  open. An attempt the motor refuses, moving the cover up 0.01 or less, as a refusing motor was
+  seen to, does not count: it is made again after the next `delay` of stillness. A cover that
+  backed off below `min_openness` is left there. The tracker keeps each rail's lowest and highest
+  position since a move began, which tells how far a move went up before the motor backed off.
+  Where a move ended counts once the shade has sent no event for `Timing.retry_settle`: a motor
+  backing off reports where it is every 2 s. A motor that backs off sends no `motion-started`,
+  so each move waits for the shade's next `motion-stopped` alone. Each attempt, move, refusal,
+  back-off and end is logged as a warning, as the user tunes the retry from the log.
 - **One retry per stall, one per shade**, as each move is a move of the shade. It is a task in
   `run`'s TaskGroup, so it ends with `run`; an exception in it is logged and ends it as `GAVE_UP`,
   never the TaskGroup. Each move is of the cover's rail alone, sent as `move` sends it but not
@@ -122,9 +122,8 @@ it stopped, whoever started it, the hub can tell such a stop and retry it so.
   `INTERRUPTED`. A `motion-started` without a target for the rail cannot be told from the
   retry's own, so it does not.
 - **Time** is the hub's `Clock`: the wait for each move's stop, up to `Timing.retry_move_timeout`
-  and apart from the tracker's own limits, the quiet after each move, and the `delay` after each
-  step that held, 300 s by default, as gathered fabric takes
-  minutes to settle.
+  and apart from the tracker's own limits, the quiet after each move, and the stillness before
+  each attempt and the hold below the top, `delay` each, 300 s by default.
 
 ## Connection
 
